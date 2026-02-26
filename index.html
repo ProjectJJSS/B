@@ -2,601 +2,920 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>八雲台 バス案内</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>八雲台 バス</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-  :root { --bg:#0a0e1a; --surface:#111827; --accent:#00d4ff; --accent3:#7fff00; --text:#e8f4f8; --text-dim:#6b8299; --border:rgba(0,212,255,0.15); }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
-  .header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:rgba(10,14,26,.95);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;}
-  .header-left{display:flex;align-items:center;gap:10px;}
-  .bus-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#0080ff);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-  .stop-name{font-size:20px;font-weight:900;letter-spacing:.05em;}
-  .stop-ruby{font-size:10px;color:var(--text-dim);letter-spacing:.15em;}
-  .clock{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--accent);letter-spacing:.1em;text-align:right;}
-  .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
-  .tab{flex:0 0 25%;min-width:82px;padding:9px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--text-dim);cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;letter-spacing:.02em;}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,212,255,.05);}
-  .tab.odakyu.active{color:#ffa000;border-bottom-color:#ffa000;background:rgba(255,160,0,.05);}
-  .op-badge{font-size:9px;padding:1px 4px;border-radius:3px;margin-right:2px;display:inline-block;}
-  .op-keio{background:rgba(0,212,255,.2);color:var(--accent);}
-  .op-odakyu{background:rgba(255,160,0,.2);color:#ffa000;}
-  .hero{margin:16px 14px 10px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(0,128,255,.05));border:1px solid var(--accent);border-radius:16px;padding:18px;position:relative;overflow:hidden;}
-  .hero.odakyu-hero{border-color:#ffa000;background:linear-gradient(135deg,rgba(255,160,0,.08),rgba(255,100,0,.04));}
-  .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(0,212,255,.12),transparent 70%);border-radius:50%;}
-  .hero-label{font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;opacity:.8;}
-  .hero-label.odakyu-label{color:#ffa000;}
-  .hero-route{font-size:12px;color:var(--text-dim);margin-bottom:3px;}
-  .hero-destination{font-size:20px;font-weight:900;margin-bottom:14px;}
-  .countdown-wrap{display:flex;align-items:baseline;gap:5px;}
-  .countdown-num{font-family:'Share Tech Mono',monospace;font-size:68px;font-weight:700;line-height:1;color:var(--accent);text-shadow:0 0 30px rgba(0,212,255,.5);transition:color .3s;}
-  .countdown-num.urgent{color:#ff6b35;text-shadow:0 0 30px rgba(255,107,53,.6);animation:pulse 1s ease-in-out infinite;}
-  .countdown-num.odakyu-color{color:#ffa000;text-shadow:0 0 30px rgba(255,160,0,.5);}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
-  .countdown-unit{font-size:16px;font-weight:700;color:var(--text-dim);}
-  .depart-time{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text-dim);margin-top:8px;}
-  .depart-time span{color:var(--text);}
-  .progress-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:14px;overflow:hidden;}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#0080ff);border-radius:2px;transition:width 1s linear;}
-  .progress-fill.odakyu-fill{background:linear-gradient(90deg,#ffa000,#ff6600);}
-  .arrived-tag{background:rgba(127,255,0,.15);color:var(--accent3);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.1em;}
-  .section-title{font-size:10px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;padding:14px 14px 6px;}
-  .bus-list{padding:0 14px;display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
-  .bus-card{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;gap:11px;animation:slideIn .3s ease both;}
-  @keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .card-badge{width:36px;height:36px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.04em;}
-  .badge-cho{background:rgba(0,212,255,.15);color:var(--accent);border:1px solid rgba(0,212,255,.3);}
-  .badge-taka{background:rgba(127,255,0,.12);color:var(--accent3);border:1px solid rgba(127,255,0,.25);}
-  .badge-yoshi{background:rgba(255,160,0,.15);color:#ffa000;border:1px solid rgba(255,160,0,.3);}
-  .badge-taka61{background:rgba(255,80,80,.13);color:#ff6060;border:1px solid rgba(255,80,80,.25);}
-  .card-info{flex:1;min-width:0;}
-  .card-dest{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .card-route{font-size:10px;color:var(--text-dim);margin-top:1px;}
-  .card-time-block{text-align:right;flex-shrink:0;}
-  .card-depart{font-family:'Share Tech Mono',monospace;font-size:17px;font-weight:700;}
-  .card-remaining{font-size:11px;color:var(--text-dim);margin-top:2px;white-space:nowrap;}
-  .card-remaining.soon{color:#ff6b35;font-weight:700;}
-  .no-bus{text-align:center;padding:40px 20px;color:var(--text-dim);font-size:14px;}
-  .rt-banner{margin:0 14px 4px;padding:8px 12px;border-radius:10px;font-size:11px;display:flex;align-items:center;gap:8px;font-weight:700;}
-  .rt-banner.rt-active{background:rgba(127,255,0,.1);border:1px solid rgba(127,255,0,.25);color:var(--accent3);}
-  .rt-banner.rt-inactive{background:rgba(107,130,153,.1);border:1px solid rgba(107,130,153,.2);color:var(--text-dim);}
-  .rt-banner.rt-error{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.2);color:#ff8080;}
-  .rt-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-  .rt-dot.live{background:var(--accent3);box-shadow:0 0 6px var(--accent3);animation:blink 1.5s ease-in-out infinite;}
-  .rt-dot.off{background:var(--text-dim);}
-  .rt-dot.err{background:#ff8080;}
-  .delay-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;}
-  .delay-late{background:rgba(255,107,53,.2);color:#ff6b35;}
-  .delay-early{background:rgba(127,255,0,.15);color:var(--accent3);}
-  .delay-ontime{background:rgba(0,212,255,.12);color:var(--accent);}
-  .rt-updated{font-size:9px;color:var(--text-dim);margin-left:auto;font-weight:400;}
-  .setup-banner{margin:12px 14px;padding:14px;background:rgba(255,160,0,.08);border:1px solid rgba(255,160,0,.3);border-radius:12px;font-size:12px;line-height:1.7;}
-  .setup-banner a{color:#ffa000;}
-  .setup-banner code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-size:11px;}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-  .refresh-dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);animation:blink 2s ease-in-out infinite;display:inline-block;margin-right:4px;vertical-align:middle;}
-  .footer{text-align:center;padding:18px 14px;font-size:10px;color:var(--text-dim);letter-spacing:.1em;border-top:1px solid var(--border);margin-top:8px;}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg: #0b0f1c;
+  --panel: #111827;
+  --panel2: #1a2234;
+  --accent-keio: #00d4ff;
+  --accent-odakyu: #ff9500;
+  --text: #f0f6ff;
+  --dim: #5a7a99;
+  --border: rgba(255,255,255,0.07);
+  --green: #4ade80;
+  --red: #f87171;
+}
+html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: 'Noto Sans JP', sans-serif; color: var(--text); }
+
+/* ── LAYOUT ── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ── TOP PANEL (25%) ── */
+#top-panel {
+  flex: 0 0 auto;
+  height: 25%;
+  min-height: 140px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+/* header strip */
+.header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stop-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.stop-name-big { font-size: 18px; font-weight: 900; letter-spacing: .04em; }
+.stop-ruby { font-size: 10px; color: var(--dim); letter-spacing: .15em; }
+.clock-mono {
+  font-family: 'DM Mono', monospace;
+  font-size: 17px;
+  color: var(--accent-keio);
+  letter-spacing: .08em;
+}
+.day-chip {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.07);
+  color: var(--dim);
+  font-weight: 700;
+  letter-spacing: .05em;
+  margin-top: 1px;
+}
+
+/* tab row */
+.tab-row {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  padding: 6px 4px 5px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all .2s;
+  border-bottom: 2px solid transparent;
+  position: relative;
+}
+.tab.active-k { color: var(--accent-keio); border-bottom-color: var(--accent-keio); background: rgba(0,212,255,.04); }
+.tab.active-o { color: var(--accent-odakyu); border-bottom-color: var(--accent-odakyu); background: rgba(255,149,0,.04); }
+.op-chip {
+  display: inline-block;
+  font-size: 8px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-right: 2px;
+  font-weight: 900;
+}
+.ck { background: rgba(0,212,255,.18); color: var(--accent-keio); }
+.co { background: rgba(255,149,0,.18); color: var(--accent-odakyu); }
+
+/* next-bus hero */
+.next-bus-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 12px;
+  overflow: hidden;
+}
+.route-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  flex-shrink: 0;
+  letter-spacing: .02em;
+}
+.rb-keio { background: rgba(0,212,255,.15); border: 1.5px solid rgba(0,212,255,.4); color: var(--accent-keio); }
+.rb-odakyu { background: rgba(255,149,0,.15); border: 1.5px solid rgba(255,149,0,.4); color: var(--accent-odakyu); }
+.rb-green { background: rgba(74,222,128,.15); border: 1.5px solid rgba(74,222,128,.4); color: var(--green); }
+.rb-red { background: rgba(248,113,113,.15); border: 1.5px solid rgba(248,113,113,.4); color: var(--red); }
+
+.next-info { flex: 1; min-width: 0; }
+.next-dest { font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.next-route { font-size: 10px; color: var(--dim); margin-top: 1px; }
+.next-countdown {
+  text-align: right;
+  flex-shrink: 0;
+}
+.cnt-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1;
+  transition: color .3s;
+}
+.cnt-num.keio-col { color: var(--accent-keio); }
+.cnt-num.odakyu-col { color: var(--accent-odakyu); }
+.cnt-num.urgent-col { color: var(--red); animation: throb .8s ease-in-out infinite; }
+.cnt-unit { font-size: 11px; color: var(--dim); font-weight: 700; }
+.cnt-depart { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+/* delay tag */
+.delay-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 5px;
+}
+.dl-late { background: rgba(248,113,113,.2); color: var(--red); }
+.dl-early { background: rgba(74,222,128,.2); color: var(--green); }
+.dl-ontime { background: rgba(0,212,255,.15); color: var(--accent-keio); }
+
+@keyframes throb { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ── MAP (75%) ── */
+#map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#map { width: 100%; height: 100%; }
+
+/* map overlays */
+.map-overlay-tl {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-pill {
+  background: rgba(11,15,28,.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 1.5s ease-in-out infinite;
+}
+.demo-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-odakyu);
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* upcoming bottom sheet */
+#bottom-sheet {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 800;
+  background: linear-gradient(to top, rgba(11,15,28,.97) 70%, transparent);
+  padding: 20px 14px 14px;
+}
+.upcoming-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.upcoming-row::-webkit-scrollbar { display: none; }
+.upcoming-card {
+  flex: 0 0 auto;
+  background: rgba(26,34,52,.9);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 11px;
+  min-width: 100px;
+}
+.uc-time { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+.uc-dest { font-size: 10px; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.uc-min { font-size: 10px; font-weight: 700; margin-top: 3px; }
+
+/* Leaflet custom bus icon wrapper */
+.bus-icon-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bus-icon-emoji {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.6));
+  animation: bounceY .9s ease-in-out infinite alternate;
+}
+@keyframes bounceY { from{transform:translateY(0)} to{transform:translateY(-4px)} }
+.bus-icon-label {
+  background: rgba(0,212,255,.9);
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.bus-icon-label.od { background: rgba(255,149,0,.9); }
+.bus-icon-label.arriving { background: rgba(248,113,113,.9); animation: throb .8s ease-in-out infinite; }
+
+/* stop icon */
+.stop-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stop-pin-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-keio);
+  box-shadow: 0 0 0 3px rgba(0,212,255,.3);
+}
+.stop-pin-label {
+  background: rgba(11,15,28,.9);
+  color: var(--text);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-top: 3px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* you-pin */
+.you-pin {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 3px solid rgba(74,222,128,.3);
+  box-shadow: 0 0 0 6px rgba(74,222,128,.15), 0 0 12px rgba(74,222,128,.5);
+  animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(74,222,128,.5), 0 0 12px rgba(74,222,128,.4); }
+  70%  { box-shadow: 0 0 0 14px rgba(74,222,128,0), 0 0 12px rgba(74,222,128,.2); }
+  100% { box-shadow: 0 0 0 0 rgba(74,222,128,0), 0 0 12px rgba(74,222,128,.3); }
+}
+
+/* Leaflet overrides */
+.leaflet-container { background: #1a2035; }
+.leaflet-control-zoom { border: 1px solid var(--border) !important; }
+.leaflet-control-zoom a { background: rgba(26,34,52,.95) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.bus-stop-tooltip {
+  background: rgba(11,15,28,.95) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  color: #f0f6ff !important;
+  font-size: 11px !important;
+  font-family: 'Noto Sans JP', sans-serif !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.5) !important;
+}
+.bus-stop-tooltip::before { display: none !important; }
+
+/* 地図凡例 */
+.map-legend {
+  position: absolute;
+  bottom: 120px;
+  right: 10px;
+  z-index: 800;
+  background: rgba(11,15,28,.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.legend-home {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #00d4ff;
+  margin-right: 4px;
+  vertical-align: middle;
+  box-shadow: 0 0 4px #00d4ff88;
+}
 </style>
 </head>
 <body>
-<div class="header">
-  <div class="header-left">
-    <div class="bus-icon">🚌</div>
-    <div>
-      <div class="stop-name">八雲台</div>
-      <div class="stop-ruby">YAKUMODAI</div>
+<div id="app">
+  <!-- TOP 25% -->
+  <div id="top-panel">
+    <div class="header-strip">
+      <div>
+        <div class="stop-label">
+          <span class="stop-name-big">八雲台</span>
+          <span class="stop-ruby">YAKUMODAI</span>
+        </div>
+        <div class="day-chip" id="day-chip">平日ダイヤ</div>
+      </div>
+      <div style="text-align:right">
+        <div class="clock-mono" id="clock">--:--:--</div>
+      </div>
+    </div>
+    <div class="tab-row" id="tab-row">
+      <div class="tab active-o" onclick="setDir(0)"><span class="op-chip co">小急</span>①吉祥寺</div>
+      <div class="tab" onclick="setDir(1)"><span class="op-chip co">小急</span>②調布</div>
+      <div class="tab" onclick="setDir(2)"><span class="op-chip ck">京王</span>①三鷹</div>
+      <div class="tab" onclick="setDir(3)"><span class="op-chip ck">京王</span>②調布</div>
+    </div>
+    <div class="next-bus-row">
+      <div class="route-badge rb-odakyu" id="next-badge">吉１４</div>
+      <div class="next-info">
+        <div class="next-dest" id="next-dest">—</div>
+        <div class="next-route" id="next-route">—</div>
+      </div>
+      <div class="next-countdown">
+        <div class="cnt-num odakyu-col" id="cnt-num">--</div>
+        <div class="cnt-unit" id="cnt-unit">分</div>
+        <div class="cnt-depart" id="cnt-depart">--:--発</div>
+      </div>
     </div>
   </div>
-  <div>
-    <div class="clock" id="clock">--:--:--</div>
-    <div style="font-size:9px;color:var(--text-dim);text-align:right;margin-top:2px;" id="dayLabel">--</div>
+
+  <!-- MAP 75% -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <div class="map-overlay-tl">
+      <div class="map-pill">
+        <div class="demo-dot"></div>
+        <span>デモアニメ</span>
+      </div>
+    </div>
+
+    <div class="map-legend">
+      <div><span class="legend-home"></span>八雲台（現在のバス停）</div>
+      <div><span class="legend-dot" style="background:#00d4ff"></span>京王バス停</div>
+      <div><span class="legend-dot" style="background:#ff9500"></span>小田急バス停</div>
+      <div><span class="legend-dot" style="background:#c084fc"></span>両社共通</div>
+      <div><span class="legend-dot" style="background:#4ade80"></span>現在地</div>
+    </div>
+
+    <div id="bottom-sheet">
+      <div class="upcoming-row" id="upcoming-row"></div>
+    </div>
   </div>
 </div>
-<div class="tabs">
-  <div class="tab odakyu active" onclick="setDir(0)" id="tab0"><span class="op-badge op-odakyu">小急</span>①<br><small style="font-size:9px;font-weight:400;">吉祥寺・三鷹</small></div>
-  <div class="tab odakyu" onclick="setDir(1)" id="tab1"><span class="op-badge op-odakyu">小急</span>②<br><small style="font-size:9px;font-weight:400;">調布駅北口</small></div>
-  <div class="tab" onclick="setDir(2)" id="tab2"><span class="op-badge op-keio">京王</span>①<br><small style="font-size:9px;font-weight:400;">深大寺・三鷹</small></div>
-  <div class="tab" onclick="setDir(3)" id="tab3"><span class="op-badge op-keio">京王</span>②<br><small style="font-size:9px;font-weight:400;">調布駅北口</small></div>
-</div>
-<div id="rt-banner" class="rt-banner rt-inactive" style="display:none">
-  <div class="rt-dot off" id="rt-dot"></div>
-  <span id="rt-status">リアルタイム未接続</span>
-  <span class="rt-updated" id="rt-updated"></span>
-</div>
-<div id="setup-msg" class="setup-banner" style="display:none">
-  🔧 <strong>リアルタイム機能を有効にするには：</strong><br>
-  ① <a href="https://developer.odpt.org" target="_blank">developer.odpt.org</a> で無料APIキーを取得<br>
-  ② <a href="keio-bus-worker.js" target="_blank">Cloudflare Worker</a>（別ファイル）にキーを貼り付けてデプロイ<br>
-  ③ このHTMLの <code>WORKER_URL</code> にWorkerのURLを入力
-</div>
-<div id="app"></div>
-<div class="footer"><span class="refresh-dot"></span>毎秒更新 · 時刻表ベース · 京王バス＋小田急バス 八雲台</div>
 
 <script>
+// =============================================
+// 時刻表データ
+// =============================================
 const TT = {
-  1:{// 京王① 深大寺・三鷹
-    weekday:[
-      [7,22,'調３４','深大寺行'],[7,50,'鷹６６','三鷹駅南口行'],
-      [8,20,'調３４','深大寺行'],[8,47,'鷹６６','三鷹駅南口行'],
-      [9,20,'調３４','深大寺行'],[9,48,'鷹６６','三鷹駅南口行'],
-      [10,18,'調３４','深大寺行'],[10,40,'鷹６６','三鷹駅南口行'],[10,55,'調３４','深大寺行'],
-      [11,18,'調３４','深大寺行'],[11,38,'鷹６６','三鷹駅南口行'],[11,52,'調３４','深大寺行'],
-      [12,18,'調３４','深大寺行'],[12,21,'鷹６６','三鷹駅南口行'],[12,51,'調３４','深大寺行'],
-      [13,22,'調３４','深大寺行'],[13,50,'鷹６６','三鷹駅南口行'],
-      [14,18,'調３４','深大寺行'],[14,20,'鷹６６','三鷹駅南口行'],[14,51,'調３４','深大寺行'],
-      [15,18,'調３４','深大寺行'],[15,47,'鷹６６','三鷹駅南口行'],
-      [16,23,'調３４','深大寺行'],[16,45,'鷹６６','三鷹駅南口行'],
-      [17,17,'調３４','深大寺行'],[17,44,'鷹６６','三鷹駅南口行'],
-      [18,10,'調３４','深大寺行'],[18,18,'鷹６６','三鷹駅南口行'],[18,46,'調３４','深大寺行'],
-      [19,12,'鷹６６','三鷹駅南口行'],[19,46,'鷹６６','三鷹駅南口行'],
-      [20,10,'鷹６６','三鷹駅南口行'],[20,40,'鷹６６','三鷹駅南口行'],
-      [21,12,'鷹６６','三鷹駅南口行'],[21,39,'鷹６６','三鷹駅南口行'],
-      [22,12,'鷹６６','三鷹駅南口行'],
-    ],
-    saturday:[
-      [7,28,'鷹６６','三鷹駅南口行'],[7,30,'調３４','深大寺行'],[7,58,'鷹６６','三鷹駅南口行'],
-      [8,10,'調３４','深大寺行'],[8,48,'鷹６６','三鷹駅南口行'],[8,52,'調３４','深大寺行'],
-      [9,22,'鷹６６','三鷹駅南口行'],[9,26,'調３４','深大寺行'],[9,44,'調３４','深大寺行'],[9,50,'鷹６６','三鷹駅南口行'],[9,56,'調３４','深大寺行'],
-      [10,16,'調３４','深大寺行'],[10,20,'鷹６６','三鷹駅南口行'],[10,38,'調３４','深大寺行'],[10,50,'鷹６６','三鷹駅南口行'],[10,56,'調３４','深大寺行'],
-      [11,16,'調３４','深大寺行'],[11,30,'鷹６６','三鷹駅南口行'],[11,40,'調３４','深大寺行'],[11,54,'調３４','深大寺行'],
-      [12,16,'調３４','深大寺行'],[12,21,'鷹６６','三鷹駅南口行'],[12,34,'調３４','深大寺行'],[12,46,'鷹６６','三鷹駅南口行'],[12,56,'調３４','深大寺行'],
-      [13,10,'鷹６６','三鷹駅南口行'],[13,16,'調３４','深大寺行'],[13,40,'調３４','深大寺行'],[13,46,'鷹６６','三鷹駅南口行'],[13,56,'調３４','深大寺行'],
-      [14,14,'調３４','深大寺行'],[14,20,'鷹６６','三鷹駅南口行'],[14,34,'調３４','深大寺行'],[14,48,'調３４','深大寺行'],[14,56,'鷹６６','三鷹駅南口行'],
-      [15,16,'調３４','深大寺行'],[15,26,'鷹６６','三鷹駅南口行'],[15,40,'調３４','深大寺行'],[15,52,'調３４','深大寺行'],
-      [16,18,'鷹６６','三鷹駅南口行'],[16,20,'調３４','深大寺行'],[16,34,'調３４','深大寺行'],[16,50,'鷹６６','三鷹駅南口行'],[16,58,'調３４','深大寺行'],
-      [17,18,'調３４','深大寺行'],[17,26,'鷹６６','三鷹駅南口行'],[17,40,'調３４','深大寺行'],[17,54,'鷹６６','三鷹駅南口行'],
-      [18,24,'鷹６６','三鷹駅南口行'],[18,34,'調３４','深大寺行'],[18,52,'鷹６６','三鷹駅南口行'],
-      [19,22,'鷹６６','三鷹駅南口行'],[19,48,'鷹６６','三鷹駅南口行'],
-      [20,22,'鷹６６','三鷹駅南口行'],[20,44,'鷹６６','三鷹駅南口行'],
-      [21,10,'鷹６６','三鷹駅南口行'],[21,38,'鷹６６','三鷹駅南口行'],
-      [22,10,'鷹６６','三鷹駅南口行'],
-    ],
-    holiday:[
-      [7,24,'鷹６６','三鷹駅南口行'],[7,58,'鷹６６','三鷹駅南口行'],
-      [8,44,'鷹６６','三鷹駅南口行'],[8,48,'調３４','深大寺行'],
-      [9,14,'鷹６６','三鷹駅南口行'],[9,16,'調３４','深大寺行'],[9,30,'調３４','深大寺行'],[9,44,'鷹６６','三鷹駅南口行'],[9,52,'調３４','深大寺行'],
-      [10,16,'鷹６６','三鷹駅南口行'],[10,22,'調３４','深大寺行'],[10,40,'鷹６６','三鷹駅南口行'],[10,42,'調３４','深大寺行'],[10,50,'調３４','深大寺行'],
-      [11,12,'鷹６６','三鷹駅南口行'],[11,15,'調３４','深大寺行'],[11,25,'調３４','深大寺行'],[11,38,'鷹６６','三鷹駅南口行'],[11,45,'調３４','深大寺行'],[11,55,'調３４','深大寺行'],
-      [12,9,'鷹６６','三鷹駅南口行'],[12,10,'調３４','深大寺行'],[12,25,'調３４','深大寺行'],[12,40,'鷹６６','三鷹駅南口行'],[12,55,'調３４','深大寺行'],
-      [13,8,'鷹６６','三鷹駅南口行'],[13,10,'調３４','深大寺行'],[13,20,'調３４','深大寺行'],[13,35,'調３４','深大寺行'],[13,44,'鷹６６','三鷹駅南口行'],[13,50,'調３４','深大寺行'],
-      [14,12,'鷹６６','三鷹駅南口行'],[14,15,'調３４','深大寺行'],[14,30,'調３４','深大寺行'],[14,44,'鷹６６','三鷹駅南口行'],[14,45,'調３４','深大寺行'],
-      [15,10,'鷹６６','三鷹駅南口行'],[15,15,'調３４','深大寺行'],[15,30,'調３４','深大寺行'],[15,40,'調３４','深大寺行'],[15,52,'鷹６６','三鷹駅南口行'],[15,55,'調３４','深大寺行'],
-      [16,14,'鷹６６','三鷹駅南口行'],[16,25,'調３４','深大寺行'],[16,52,'鷹６６','三鷹駅南口行'],
-      [17,18,'鷹６６','三鷹駅南口行'],[17,20,'調３４','深大寺行'],[17,40,'調３４','深大寺行'],[17,52,'鷹６６','三鷹駅南口行'],
-      [18,16,'鷹６６','三鷹駅南口行'],[18,20,'調３４','深大寺行'],[18,43,'鷹６６','三鷹駅南口行'],
-      [19,20,'鷹６６','三鷹駅南口行'],[19,42,'鷹６６','三鷹駅南口行'],
-      [20,19,'鷹６６','三鷹駅南口行'],[20,43,'鷹６６','三鷹駅南口行'],
-      [21,8,'鷹６６','三鷹駅南口行'],[21,38,'鷹６６','三鷹駅南口行'],
-      [22,12,'鷹６６','三鷹駅南口行'],
-    ]
-  },
-  2:{// 京王② 調布駅北口
-    weekday:[
-      [6,10,'調３４','調布駅北口行'],
-      [7,17,'鷹６６','調布駅北口行'],[7,47,'鷹６６','調布駅北口行'],
-      [8,13,'鷹６６','調布駅北口行'],[8,42,'鷹６６','調布駅北口行'],[8,54,'鷹６６','調布駅北口行'],
-      [9,15,'鷹６６','調布駅北口行'],[9,33,'調３４','調布駅北口行'],[9,44,'鷹６６','調布駅北口行'],[9,56,'調３４','調布駅北口行'],
-      [10,13,'鷹６６','調布駅北口行'],[10,17,'調３４','調布駅北口行'],[10,35,'調３４','調布駅北口行'],[10,46,'鷹６６','調布駅北口行'],[10,57,'調３４','調布駅北口行'],
-      [11,13,'鷹６６','調布駅北口行'],[11,14,'調３４','調布駅北口行'],[11,33,'調３４','調布駅北口行'],[11,47,'鷹６６','調布駅北口行'],[11,54,'調３４','調布駅北口行'],
-      [12,14,'調３４','調布駅北口行'],[12,16,'鷹６６','調布駅北口行'],[12,37,'調３４','調布駅北口行'],[12,47,'鷹６６','調布駅北口行'],[12,54,'調３４','調布駅北口行'],
-      [13,16,'鷹６６','調布駅北口行'],[13,19,'調３４','調布駅北口行'],[13,37,'調３４','調布駅北口行'],[13,46,'鷹６６','調布駅北口行'],[13,54,'調３４','調布駅北口行'],
-      [14,14,'調３４','調布駅北口行'],[14,16,'鷹６６','調布駅北口行'],[14,37,'調３４','調布駅北口行'],[14,46,'鷹６６','調布駅北口行'],[14,54,'調３４','調布駅北口行'],
-      [15,12,'鷹６６','調布駅北口行'],[15,14,'調３４','調布駅北口行'],[15,37,'調３４','調布駅北口行'],[15,43,'鷹６６','調布駅北口行'],[15,54,'調３４','調布駅北口行'],
-      [16,14,'鷹６６','調布駅北口行'],[16,19,'調３４','調布駅北口行'],[16,37,'調３４','調布駅北口行'],[16,42,'鷹６６','調布駅北口行'],[16,52,'調３４','調布駅北口行'],
-      [17,10,'鷹６６','調布駅北口行'],[17,14,'調３４','調布駅北口行'],[17,31,'調３４','調布駅北口行'],[17,41,'鷹６６','調布駅北口行'],[17,49,'調３４','調布駅北口行'],
-      [18,7,'調３４','調布駅北口行'],[18,15,'鷹６６','調布駅北口行'],[18,23,'調３４','調布駅北口行'],[18,41,'鷹６６','調布駅北口行'],[18,44,'調３４','調布駅北口行'],
-      [19,9,'鷹６６','調布駅北口行'],[19,43,'鷹６６','調布駅北口行'],
-      [20,7,'鷹６６','調布駅北口行'],[20,37,'鷹６６','調布駅北口行'],
-      [21,9,'鷹６６','調布駅北口行'],[21,36,'鷹６６','調布駅北口行'],
-      [22,9,'鷹６６','調布駅北口行'],[22,22,'調３４','調布駅北口行'],
-    ],
-    saturday:[
-      [7,24,'鷹６６','調布駅北口行'],[7,26,'調３４','調布駅北口行'],[7,58,'鷹６６','調布駅北口行'],
-      [8,8,'調３４','調布駅北口行'],[8,43,'鷹６６','調布駅北口行'],[8,46,'調３４','調布駅北口行'],
-      [9,17,'鷹６６','調布駅北口行'],[9,18,'調３４','調布駅北口行'],[9,38,'調３４','調布駅北口行'],[9,46,'鷹６６','調布駅北口行'],[9,48,'調３４','調布駅北口行'],[9,58,'調３４','調布駅北口行'],
-      [10,8,'鷹６６','調布駅北口行'],[10,16,'調３４','調布駅北口行'],[10,34,'調３４','調布駅北口行'],[10,47,'調３４','調布駅北口行'],[10,47,'鷹６６','調布駅北口行'],[10,58,'調３４','調布駅北口行'],
-      [11,10,'鷹６６','調布駅北口行'],[11,14,'調３４','調布駅北口行'],[11,26,'調３４','調布駅北口行'],[11,38,'鷹６６','調布駅北口行'],[11,39,'調３４','調布駅北口行'],[11,54,'調３４','調布駅北口行'],
-      [12,10,'調３４','調布駅北口行'],[12,19,'鷹６６','調布駅北口行'],[12,21,'調３４','調布駅北口行'],[12,34,'調３４','調布駅北口行'],[12,43,'鷹６６','調布駅北口行'],[12,49,'調３４','調布駅北口行'],
-      [13,4,'調３４','調布駅北口行'],[13,8,'鷹６６','調布駅北口行'],[13,19,'調３４','調布駅北口行'],[13,34,'調３４','調布駅北口行'],[13,45,'鷹６６','調布駅北口行'],[13,47,'調３４','調布駅北口行'],
-      [14,0,'調３４','調布駅北口行'],[14,9,'鷹６６','調布駅北口行'],[14,14,'調３４','調布駅北口行'],[14,27,'調３４','調布駅北口行'],[14,41,'調３４','調布駅北口行'],[14,42,'鷹６６','調布駅北口行'],[14,54,'調３４','調布駅北口行'],
-      [15,9,'調３４','調布駅北口行'],[15,16,'鷹６６','調布駅北口行'],[15,22,'調３４','調布駅北口行'],[15,34,'調３４','調布駅北口行'],[15,47,'鷹６６','調布駅北口行'],[15,49,'調３４','調布駅北口行'],
-      [16,1,'調３４','調布駅北口行'],[16,13,'鷹６６','調布駅北口行'],[16,14,'調３４','調布駅北口行'],[16,29,'調３４','調布駅北口行'],[16,41,'調３４','調布駅北口行'],[16,48,'鷹６６','調布駅北口行'],[16,54,'調３４','調布駅北口行'],
-      [17,14,'調３４','調布駅北口行'],[17,18,'鷹６６','調布駅北口行'],[17,33,'調３４','調布駅北口行'],[17,50,'鷹６６','調布駅北口行'],[17,59,'調３４','調布駅北口行'],
-      [18,19,'鷹６６','調布駅北口行'],[18,29,'調３４','調布駅北口行'],[18,47,'鷹６６','調布駅北口行'],
-      [19,18,'鷹６６','調布駅北口行'],[19,44,'鷹６６','調布駅北口行'],
-      [20,16,'調３４','調布駅北口行'],[20,17,'鷹６６','調布駅北口行'],[20,40,'鷹６６','調布駅北口行'],
-      [21,6,'鷹６６','調布駅北口行'],[21,35,'鷹６６','調布駅北口行'],[21,58,'調３４','調布駅北口行'],
-      [22,7,'鷹６６','調布駅北口行'],[22,12,'調３４','調布駅北口行'],[22,22,'調３４','調布駅北口行'],
-    ],
-    holiday:[
-      [7,21,'鷹６６','調布駅北口行'],[7,55,'鷹６６','調布駅北口行'],
-      [8,40,'鷹６６','調布駅北口行'],[8,44,'調３４','調布駅北口行'],
-      [9,11,'鷹６６','調布駅北口行'],[9,12,'調３４','調布駅北口行'],[9,26,'調３４','調布駅北口行'],[9,36,'調３４','調布駅北口行'],[9,39,'鷹６６','調布駅北口行'],[9,48,'調３４','調布駅北口行'],
-      [10,6,'調３４','調布駅北口行'],[10,13,'鷹６６','調布駅北口行'],[10,18,'調３４','調布駅北口行'],[10,36,'調３４','調布駅北口行'],[10,38,'鷹６６','調布駅北口行'],[10,45,'調３４','調布駅北口行'],[10,58,'調３４','調布駅北口行'],
-      [11,8,'鷹６６','調布駅北口行'],[11,11,'調３４','調布駅北口行'],[11,21,'調３４','調布駅北口行'],[11,34,'調３４','調布駅北口行'],[11,34,'鷹６６','調布駅北口行'],[11,41,'調３４','調布駅北口行'],[11,51,'調３４','調布駅北口行'],
-      [12,6,'調３４','調布駅北口行'],[12,6,'鷹６６','調布駅北口行'],[12,21,'調３４','調布駅北口行'],[12,36,'調３４','調布駅北口行'],[12,36,'鷹６６','調布駅北口行'],[12,51,'調３４','調布駅北口行'],
-      [13,5,'鷹６６','調布駅北口行'],[13,6,'調３４','調布駅北口行'],[13,16,'調３４','調布駅北口行'],[13,31,'調３４','調布駅北口行'],[13,41,'鷹６６','調布駅北口行'],[13,46,'調３４','調布駅北口行'],[13,56,'調３４','調布駅北口行'],
-      [14,8,'鷹６６','調布駅北口行'],[14,11,'調３４','調布駅北口行'],[14,26,'調３４','調布駅北口行'],[14,41,'鷹６６','調布駅北口行'],[14,41,'調３４','調布駅北口行'],[14,56,'調３４','調布駅北口行'],
-      [15,7,'鷹６６','調布駅北口行'],[15,11,'調３４','調布駅北口行'],[15,26,'調３４','調布駅北口行'],[15,36,'調３４','調布駅北口行'],[15,48,'鷹６６','調布駅北口行'],[15,51,'調３４','調布駅北口行'],
-      [16,6,'調３４','調布駅北口行'],[16,11,'鷹６６','調布駅北口行'],[16,21,'調３４','調布駅北口行'],[16,36,'調３４','調布駅北口行'],[16,48,'鷹６６','調布駅北口行'],[16,51,'調３４','調布駅北口行'],
-      [17,6,'調３４','調布駅北口行'],[17,15,'鷹６６','調布駅北口行'],[17,16,'調３４','調布駅北口行'],[17,36,'調３４','調布駅北口行'],[17,48,'鷹６６','調布駅北口行'],[17,51,'調３４','調布駅北口行'],
-      [18,6,'調３４','調布駅北口行'],[18,13,'鷹６６','調布駅北口行'],[18,16,'調３４','調布駅北口行'],[18,30,'調３４','調布駅北口行'],[18,39,'鷹６６','調布駅北口行'],
-      [19,16,'鷹６６','調布駅北口行'],[19,38,'鷹６６','調布駅北口行'],
-      [20,15,'調３４','調布駅北口行'],[20,16,'鷹６６','調布駅北口行'],[20,39,'鷹６６','調布駅北口行'],
-      [21,5,'鷹６６','調布駅北口行'],[21,34,'鷹６６','調布駅北口行'],[21,55,'調３４','調布駅北口行'],
-      [22,8,'鷹６６','調布駅北口行'],[22,12,'調３４','調布駅北口行'],[22,22,'調３４','調布駅北口行'],
-    ]
-  },
-  3:{// 小急① 吉祥寺・三鷹
-    weekday:[
-      [6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],
-      [7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],
-      [8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],
-      [9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],
-      [10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],
-      [11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],
-      [12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],
-      [13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],
-      [14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],
-      [15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],
-      [16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],
-      [17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],
-      [18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],
-      [6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],
-      [8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],
-      [9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],
-      [10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],
-      [11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],
-      [12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],
-      [13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],
-      [14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],
-      [15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],
-      [16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],
-      [17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],
-      [18,19,'鷹６１','三鷹駅行'],
-      [19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],
-      [20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],
-      [21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行'],
-    ],
-    saturday:[
-      [6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],
-      [7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],
-      [8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],
-      [9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],
-      [10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],
-      [11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],
-      [12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],
-      [13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],
-      [14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],
-      [15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],
-      [16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],
-      [17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],
-      [18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],
-      [6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],
-      [8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],
-      [9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],
-      [10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],
-      [11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],
-      [12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],
-      [13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],
-      [14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],
-      [15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],
-      [16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],
-      [17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],
-      [18,19,'鷹６１','三鷹駅行'],
-      [19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],
-      [20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],
-      [21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行'],
-    ],
-    holiday:[
-      [6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],
-      [7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],
-      [8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],
-      [9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],
-      [10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],
-      [11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],
-      [12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],
-      [13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],
-      [14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],
-      [15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],
-      [16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],
-      [17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],
-      [18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],
-      [6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],
-      [8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],
-      [9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],
-      [10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],
-      [11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],
-      [12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],
-      [13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],
-      [14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],
-      [15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],
-      [16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],
-      [17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],
-      [18,19,'鷹６１','三鷹駅行'],
-      [19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],
-      [20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],
-      [21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行'],
-    ]
-  },
-  4:{// 小急② 調布駅北口
-    weekday:[
-      [6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],
-      [7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],
-      [8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],
-      [9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],
-      [10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],
-      [11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],
-      [12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],
-      [13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],
-      [14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],
-      [15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],
-      [16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],
-      [17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],
-      [18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],
-      [19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],
-      [20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],
-      [21,21,'吉１４','調布駅北口行'],
-      [7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],
-      [8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],
-      [9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],
-      [10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],
-      [11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],
-      [12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],
-      [13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],
-      [14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],
-      [15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],
-      [16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],
-      [17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],
-      [18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],
-      [19,25,'鷹６１','調布駅北口行'],
-    ],
-    saturday:[
-      [6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],
-      [7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],
-      [8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],
-      [9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],
-      [10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],
-      [11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],
-      [12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],
-      [13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],
-      [14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],
-      [15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],
-      [16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],
-      [17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],
-      [18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],
-      [19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],
-      [20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],
-      [21,21,'吉１４','調布駅北口行'],
-      [7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],
-      [8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],
-      [9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],
-      [10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],
-      [11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],
-      [12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],
-      [13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],
-      [14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],
-      [15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],
-      [16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],
-      [17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],
-      [18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],
-      [19,25,'鷹６１','調布駅北口行'],
-    ],
-    holiday:[
-      [6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],
-      [7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],
-      [8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],
-      [9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],
-      [10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],
-      [11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],
-      [12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],
-      [13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],
-      [14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],
-      [15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],
-      [16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],
-      [17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],
-      [18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],
-      [19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],
-      [20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],
-      [21,21,'吉１４','調布駅北口行'],
-      [7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],
-      [8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],
-      [9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],
-      [10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],
-      [11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],
-      [12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],
-      [13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],
-      [14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],
-      [15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],
-      [16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],
-      [17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],
-      [18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],
-      [19,25,'鷹６１','調布駅北口行'],
-    ]
+  1:{weekday:[[6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],[7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],[8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],[9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],[10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],[11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],[12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],[13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],[14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],[15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],[16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],[17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],[18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],[6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],[8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],[9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],[10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],[11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],[12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],[13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],[14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],[15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],[16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],[17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],[18,19,'鷹６１','三鷹駅行'],[19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],[20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],[21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行']],saturday:[[6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],[7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],[8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],[9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],[10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],[11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],[12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],[13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],[14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],[15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],[16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],[17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],[18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],[6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],[8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],[9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],[10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],[11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],[12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],[13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],[14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],[15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],[16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],[17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],[18,19,'鷹６１','三鷹駅行'],[19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],[20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],[21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行']],holiday:[[6,22,'吉１４','吉祥寺駅行'],[6,57,'吉１４','吉祥寺駅行'],[7,16,'吉１４','吉祥寺駅行'],[7,36,'吉１４','吉祥寺駅行'],[7,58,'吉１４','吉祥寺駅行'],[8,15,'吉１４','吉祥寺駅行'],[8,37,'吉１４','吉祥寺駅行'],[8,56,'吉１４','吉祥寺駅行'],[9,18,'吉１４','吉祥寺駅行'],[9,40,'吉１４','吉祥寺駅行'],[10,2,'吉１４','吉祥寺駅行'],[10,20,'吉１４','吉祥寺駅行'],[10,35,'吉１４','吉祥寺駅行'],[10,57,'吉１４','吉祥寺駅行'],[11,15,'吉１４','吉祥寺駅行'],[11,35,'吉１４','吉祥寺駅行'],[11,55,'吉１４','吉祥寺駅行'],[12,19,'吉１４','吉祥寺駅行'],[12,39,'吉１４','吉祥寺駅行'],[12,57,'吉１４','吉祥寺駅行'],[13,17,'吉１４','吉祥寺駅行'],[13,37,'吉１４','吉祥寺駅行'],[13,57,'吉１４','吉祥寺駅行'],[14,17,'吉１４','吉祥寺駅行'],[14,37,'吉１４','吉祥寺駅行'],[15,0,'吉１４','吉祥寺駅行'],[15,19,'吉１４','吉祥寺駅行'],[15,36,'吉１４','吉祥寺駅行'],[15,56,'吉１４','吉祥寺駅行'],[16,23,'吉１４','吉祥寺駅行'],[16,39,'吉１４','吉祥寺駅行'],[16,59,'吉１４','吉祥寺駅行'],[17,17,'吉１４','吉祥寺駅行'],[17,39,'吉１４','吉祥寺駅行'],[17,59,'吉１４','吉祥寺駅行'],[18,19,'吉１４','吉祥寺駅行'],[18,39,'吉１４','吉祥寺駅行'],[6,58,'鷹６１','三鷹駅行'],[7,15,'鷹６１','三鷹駅行'],[7,35,'鷹６１','三鷹駅行'],[7,53,'鷹６１','三鷹駅行'],[8,18,'鷹６１','三鷹駅行'],[8,51,'鷹６１','三鷹駅行'],[9,20,'鷹６１','三鷹駅行'],[9,55,'鷹６１','三鷹駅行'],[10,20,'鷹６１','三鷹駅行'],[10,52,'鷹６１','三鷹駅行'],[11,20,'鷹６１','三鷹駅行'],[11,48,'鷹６１','三鷹駅行'],[12,20,'鷹６１','三鷹駅行'],[12,48,'鷹６１','三鷹駅行'],[13,20,'鷹６１','三鷹駅行'],[13,48,'鷹６１','三鷹駅行'],[14,20,'鷹６１','三鷹駅行'],[14,48,'鷹６１','三鷹駅行'],[15,20,'鷹６１','三鷹駅行'],[15,48,'鷹６１','三鷹駅行'],[16,18,'鷹６１','三鷹駅行'],[16,48,'鷹６１','三鷹駅行'],[17,20,'鷹６１','三鷹駅行'],[17,50,'鷹６１','三鷹駅行'],[18,19,'鷹６１','三鷹駅行'],[19,17,'鷹６１','三鷹駅行'],[19,37,'鷹６１','三鷹駅行'],[19,57,'鷹６１','三鷹駅行'],[20,15,'鷹６１','三鷹駅行'],[20,35,'鷹６１','三鷹駅行'],[20,55,'鷹６１','三鷹駅行'],[21,20,'鷹６１','三鷹駅行'],[21,42,'鷹６１','三鷹駅行']]},
+  2:{weekday:[[6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],[7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],[8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],[9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],[10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],[11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],[12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],[13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],[14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],[15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],[16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],[17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],[18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],[19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],[20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],[21,21,'吉１４','調布駅北口行'],[7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],[8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],[9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],[10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],[11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],[12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],[13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],[14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],[15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],[16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],[17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],[18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],[19,25,'鷹６１','調布駅北口行']],saturday:[[6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],[7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],[8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],[9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],[10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],[11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],[12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],[13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],[14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],[15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],[16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],[17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],[18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],[19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],[20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],[21,21,'吉１４','調布駅北口行'],[7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],[8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],[9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],[10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],[11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],[12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],[13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],[14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],[15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],[16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],[17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],[18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],[19,25,'鷹６１','調布駅北口行']],holiday:[[6,4,'吉１４','調布駅北口行'],[6,39,'吉１４','調布駅北口行'],[6,58,'吉１４','調布駅北口行'],[7,16,'吉１４','調布駅北口行'],[7,34,'吉１４','調布駅北口行'],[7,53,'吉１４','調布駅北口行'],[8,13,'吉１４','調布駅北口行'],[8,33,'吉１４','調布駅北口行'],[8,57,'吉１４','調布駅北口行'],[9,17,'吉１４','調布駅北口行'],[9,36,'吉１４','調布駅北口行'],[9,55,'吉１４','調布駅北口行'],[10,9,'吉１４','調布駅北口行'],[10,25,'吉１４','調布駅北口行'],[10,45,'吉１４','調布駅北口行'],[11,4,'吉１４','調布駅北口行'],[11,24,'吉１４','調布駅北口行'],[11,44,'吉１４','調布駅北口行'],[12,5,'吉１４','調布駅北口行'],[12,25,'吉１４','調布駅北口行'],[12,42,'吉１４','調布駅北口行'],[13,4,'吉１４','調布駅北口行'],[13,27,'吉１４','調布駅北口行'],[13,47,'吉１４','調布駅北口行'],[14,5,'吉１４','調布駅北口行'],[14,28,'吉１４','調布駅北口行'],[14,48,'吉１４','調布駅北口行'],[15,8,'吉１４','調布駅北口行'],[15,28,'吉１４','調布駅北口行'],[15,51,'吉１４','調布駅北口行'],[16,8,'吉１４','調布駅北口行'],[16,24,'吉１４','調布駅北口行'],[16,44,'吉１４','調布駅北口行'],[17,4,'吉１４','調布駅北口行'],[17,24,'吉１４','調布駅北口行'],[17,45,'吉１４','調布駅北口行'],[18,5,'吉１４','調布駅北口行'],[18,26,'吉１４','調布駅北口行'],[18,46,'吉１４','調布駅北口行'],[19,6,'吉１４','調布駅北口行'],[19,23,'吉１４','調布駅北口行'],[19,47,'吉１４','調布駅北口行'],[20,10,'吉１４','調布駅北口行'],[20,30,'吉１４','調布駅北口行'],[20,59,'吉１４','調布駅北口行'],[21,21,'吉１４','調布駅北口行'],[7,10,'鷹６１','調布駅北口行'],[7,40,'鷹６１','調布駅北口行'],[8,10,'鷹６１','調布駅北口行'],[8,45,'鷹６１','調布駅北口行'],[9,15,'鷹６１','調布駅北口行'],[9,50,'鷹６１','調布駅北口行'],[10,22,'鷹６１','調布駅北口行'],[10,55,'鷹６１','調布駅北口行'],[11,25,'鷹６１','調布駅北口行'],[11,55,'鷹６１','調布駅北口行'],[12,25,'鷹６１','調布駅北口行'],[12,55,'鷹６１','調布駅北口行'],[13,25,'鷹６１','調布駅北口行'],[13,55,'鷹６１','調布駅北口行'],[14,25,'鷹６１','調布駅北口行'],[14,55,'鷹６１','調布駅北口行'],[15,25,'鷹６１','調布駅北口行'],[15,55,'鷹６１','調布駅北口行'],[16,25,'鷹６１','調布駅北口行'],[16,55,'鷹６１','調布駅北口行'],[17,25,'鷹６１','調布駅北口行'],[17,55,'鷹６１','調布駅北口行'],[18,25,'鷹６１','調布駅北口行'],[18,55,'鷹６１','調布駅北口行'],[19,25,'鷹６１','調布駅北口行']]},
+  3:{weekday:[[7,22,'調３４','深大寺行'],[7,50,'鷹６６','三鷹駅南口行'],[8,20,'調３４','深大寺行'],[8,47,'鷹６６','三鷹駅南口行'],[9,20,'調３４','深大寺行'],[9,48,'鷹６６','三鷹駅南口行'],[10,18,'調３４','深大寺行'],[10,40,'鷹６６','三鷹駅南口行'],[10,55,'調３４','深大寺行'],[11,18,'調３４','深大寺行'],[11,38,'鷹６６','三鷹駅南口行'],[11,52,'調３４','深大寺行'],[12,18,'調３４','深大寺行'],[12,21,'鷹６６','三鷹駅南口行'],[12,51,'調３４','深大寺行'],[13,22,'調３４','深大寺行'],[13,50,'鷹６６','三鷹駅南口行'],[14,18,'調３４','深大寺行'],[14,20,'鷹６６','三鷹駅南口行'],[14,51,'調３４','深大寺行'],[15,18,'調３４','深大寺行'],[15,47,'鷹６６','三鷹駅南口行'],[16,23,'調３４','深大寺行'],[16,45,'鷹６６','三鷹駅南口行'],[17,17,'調３４','深大寺行'],[17,44,'鷹６６','三鷹駅南口行'],[18,10,'調３４','深大寺行'],[18,18,'鷹６６','三鷹駅南口行'],[18,46,'調３４','深大寺行'],[19,12,'鷹６６','三鷹駅南口行'],[19,46,'鷹６６','三鷹駅南口行'],[20,10,'鷹６６','三鷹駅南口行'],[20,40,'鷹６６','三鷹駅南口行'],[21,12,'鷹６６','三鷹駅南口行'],[21,39,'鷹６６','三鷹駅南口行'],[22,12,'鷹６６','三鷹駅南口行']],saturday:[[7,28,'鷹６６','三鷹駅南口行'],[7,30,'調３４','深大寺行'],[7,58,'鷹６６','三鷹駅南口行'],[8,10,'調３４','深大寺行'],[8,48,'鷹６６','三鷹駅南口行'],[8,52,'調３４','深大寺行'],[9,22,'鷹６６','三鷹駅南口行'],[9,26,'調３４','深大寺行'],[9,44,'調３４','深大寺行'],[9,50,'鷹６６','三鷹駅南口行'],[9,56,'調３４','深大寺行'],[10,16,'調３４','深大寺行'],[10,20,'鷹６６','三鷹駅南口行'],[10,38,'調３４','深大寺行'],[10,50,'鷹６６','三鷹駅南口行'],[10,56,'調３４','深大寺行'],[11,16,'調３４','深大寺行'],[11,30,'鷹６６','三鷹駅南口行'],[11,40,'調３４','深大寺行'],[11,54,'調３４','深大寺行'],[12,16,'調３４','深大寺行'],[12,21,'鷹６６','三鷹駅南口行'],[12,34,'調３４','深大寺行'],[12,46,'鷹６６','三鷹駅南口行'],[12,56,'調３４','深大寺行'],[13,10,'鷹６６','三鷹駅南口行'],[13,16,'調３４','深大寺行'],[13,40,'調３４','深大寺行'],[13,46,'鷹６６','三鷹駅南口行'],[13,56,'調３４','深大寺行'],[14,14,'調３４','深大寺行'],[14,20,'鷹６６','三鷹駅南口行'],[14,34,'調３４','深大寺行'],[14,48,'調３４','深大寺行'],[14,56,'鷹６６','三鷹駅南口行'],[15,16,'調３４','深大寺行'],[15,26,'鷹６６','三鷹駅南口行'],[15,40,'調３４','深大寺行'],[15,52,'調３４','深大寺行'],[16,18,'鷹６６','三鷹駅南口行'],[16,20,'調３４','深大寺行'],[16,34,'調３４','深大寺行'],[16,50,'鷹６６','三鷹駅南口行'],[16,58,'調３４','深大寺行'],[17,18,'調３４','深大寺行'],[17,26,'鷹６６','三鷹駅南口行'],[17,40,'調３４','深大寺行'],[17,54,'鷹６６','三鷹駅南口行'],[18,24,'鷹６６','三鷹駅南口行'],[18,34,'調３４','深大寺行'],[18,52,'鷹６６','三鷹駅南口行'],[19,22,'鷹６６','三鷹駅南口行'],[19,48,'鷹６６','三鷹駅南口行'],[20,22,'鷹６６','三鷹駅南口行'],[20,44,'鷹６６','三鷹駅南口行'],[21,10,'鷹６６','三鷹駅南口行'],[21,38,'鷹６６','三鷹駅南口行'],[22,10,'鷹６６','三鷹駅南口行']],holiday:[[7,24,'鷹６６','三鷹駅南口行'],[7,58,'鷹６６','三鷹駅南口行'],[8,44,'鷹６６','三鷹駅南口行'],[8,48,'調３４','深大寺行'],[9,14,'鷹６６','三鷹駅南口行'],[9,16,'調３４','深大寺行'],[9,30,'調３４','深大寺行'],[9,44,'鷹６６','三鷹駅南口行'],[9,52,'調３４','深大寺行'],[10,16,'鷹６６','三鷹駅南口行'],[10,22,'調３４','深大寺行'],[10,40,'鷹６６','三鷹駅南口行'],[10,42,'調３４','深大寺行'],[10,50,'調３４','深大寺行'],[11,12,'鷹６６','三鷹駅南口行'],[11,15,'調３４','深大寺行'],[11,25,'調３４','深大寺行'],[11,38,'鷹６６','三鷹駅南口行'],[11,45,'調３４','深大寺行'],[11,55,'調３４','深大寺行'],[12,9,'鷹６６','三鷹駅南口行'],[12,10,'調３４','深大寺行'],[12,25,'調３４','深大寺行'],[12,40,'鷹６６','三鷹駅南口行'],[12,55,'調３４','深大寺行'],[13,8,'鷹６６','三鷹駅南口行'],[13,10,'調３４','深大寺行'],[13,20,'調３４','深大寺行'],[13,35,'調３４','深大寺行'],[13,44,'鷹６６','三鷹駅南口行'],[13,50,'調３４','深大寺行'],[14,12,'鷹６６','三鷹駅南口行'],[14,15,'調３４','深大寺行'],[14,30,'調３４','深大寺行'],[14,44,'鷹６６','三鷹駅南口行'],[14,45,'調３４','深大寺行'],[15,10,'鷹６６','三鷹駅南口行'],[15,15,'調３４','深大寺行'],[15,30,'調３４','深大寺行'],[15,40,'調３４','深大寺行'],[15,52,'鷹６６','三鷹駅南口行'],[15,55,'調３４','深大寺行'],[16,14,'鷹６６','三鷹駅南口行'],[16,25,'調３４','深大寺行'],[16,52,'鷹６６','三鷹駅南口行'],[17,18,'鷹６６','三鷹駅南口行'],[17,20,'調３４','深大寺行'],[17,40,'調３４','深大寺行'],[17,52,'鷹６６','三鷹駅南口行'],[18,16,'鷹６６','三鷹駅南口行'],[18,20,'調３４','深大寺行'],[18,43,'鷹６６','三鷹駅南口行'],[19,20,'鷹６６','三鷹駅南口行'],[19,42,'鷹６６','三鷹駅南口行'],[20,19,'鷹６６','三鷹駅南口行'],[20,43,'鷹６６','三鷹駅南口行'],[21,8,'鷹６６','三鷹駅南口行'],[21,38,'鷹６６','三鷹駅南口行'],[22,12,'鷹６６','三鷹駅南口行']]},
+  4:{weekday:[[6,10,'調３４','調布駅北口行'],[7,17,'鷹６６','調布駅北口行'],[7,47,'鷹６６','調布駅北口行'],[8,13,'鷹６６','調布駅北口行'],[8,42,'鷹６６','調布駅北口行'],[8,54,'鷹６６','調布駅北口行'],[9,15,'鷹６６','調布駅北口行'],[9,33,'調３４','調布駅北口行'],[9,44,'鷹６６','調布駅北口行'],[9,56,'調３４','調布駅北口行'],[10,13,'鷹６６','調布駅北口行'],[10,17,'調３４','調布駅北口行'],[10,35,'調３４','調布駅北口行'],[10,46,'鷹６６','調布駅北口行'],[10,57,'調３４','調布駅北口行'],[11,13,'鷹６６','調布駅北口行'],[11,14,'調３４','調布駅北口行'],[11,33,'調３４','調布駅北口行'],[11,47,'鷹６６','調布駅北口行'],[11,54,'調３４','調布駅北口行'],[12,14,'調３４','調布駅北口行'],[12,16,'鷹６６','調布駅北口行'],[12,37,'調３４','調布駅北口行'],[12,47,'鷹６６','調布駅北口行'],[12,54,'調３４','調布駅北口行'],[13,16,'鷹６６','調布駅北口行'],[13,19,'調３４','調布駅北口行'],[13,37,'調３４','調布駅北口行'],[13,46,'鷹６６','調布駅北口行'],[13,54,'調３４','調布駅北口行'],[14,14,'調３４','調布駅北口行'],[14,16,'鷹６６','調布駅北口行'],[14,37,'調３４','調布駅北口行'],[14,46,'鷹６６','調布駅北口行'],[14,54,'調３４','調布駅北口行'],[15,12,'鷹６６','調布駅北口行'],[15,14,'調３４','調布駅北口行'],[15,37,'調３４','調布駅北口行'],[15,43,'鷹６６','調布駅北口行'],[15,54,'調３４','調布駅北口行'],[16,14,'鷹６６','調布駅北口行'],[16,19,'調３４','調布駅北口行'],[16,37,'調３４','調布駅北口行'],[16,42,'鷹６６','調布駅北口行'],[16,52,'調３４','調布駅北口行'],[17,10,'鷹６６','調布駅北口行'],[17,14,'調３４','調布駅北口行'],[17,31,'調３４','調布駅北口行'],[17,41,'鷹６６','調布駅北口行'],[17,49,'調３４','調布駅北口行'],[18,7,'調３４','調布駅北口行'],[18,15,'鷹６６','調布駅北口行'],[18,23,'調３４','調布駅北口行'],[18,41,'鷹６６','調布駅北口行'],[18,44,'調３４','調布駅北口行'],[19,9,'鷹６６','調布駅北口行'],[19,43,'鷹６６','調布駅北口行'],[20,7,'鷹６６','調布駅北口行'],[20,37,'鷹６６','調布駅北口行'],[21,9,'鷹６６','調布駅北口行'],[21,36,'鷹６６','調布駅北口行'],[22,9,'鷹６６','調布駅北口行'],[22,22,'調３４','調布駅北口行']],saturday:[[7,24,'鷹６６','調布駅北口行'],[7,26,'調３４','調布駅北口行'],[7,58,'鷹６６','調布駅北口行'],[8,8,'調３４','調布駅北口行'],[8,43,'鷹６６','調布駅北口行'],[8,46,'調３４','調布駅北口行'],[9,17,'鷹６６','調布駅北口行'],[9,18,'調３４','調布駅北口行'],[9,38,'調３４','調布駅北口行'],[9,46,'鷹６６','調布駅北口行'],[9,48,'調３４','調布駅北口行'],[9,58,'調３４','調布駅北口行'],[10,8,'鷹６６','調布駅北口行'],[10,16,'調３４','調布駅北口行'],[10,34,'調３４','調布駅北口行'],[10,47,'調３４','調布駅北口行'],[10,47,'鷹６６','調布駅北口行'],[10,58,'調３４','調布駅北口行'],[11,10,'鷹６６','調布駅北口行'],[11,14,'調３４','調布駅北口行'],[11,26,'調３４','調布駅北口行'],[11,38,'鷹６６','調布駅北口行'],[11,39,'調３４','調布駅北口行'],[11,54,'調３４','調布駅北口行'],[12,10,'調３４','調布駅北口行'],[12,19,'鷹６６','調布駅北口行'],[12,21,'調３４','調布駅北口行'],[12,34,'調３４','調布駅北口行'],[12,43,'鷹６６','調布駅北口行'],[12,49,'調３４','調布駅北口行'],[13,4,'調３４','調布駅北口行'],[13,8,'鷹６６','調布駅北口行'],[13,19,'調３４','調布駅北口行'],[13,34,'調３４','調布駅北口行'],[13,45,'鷹６６','調布駅北口行'],[13,47,'調３４','調布駅北口行'],[14,0,'調３４','調布駅北口行'],[14,9,'鷹６６','調布駅北口行'],[14,14,'調３４','調布駅北口行'],[14,27,'調３４','調布駅北口行'],[14,41,'調３４','調布駅北口行'],[14,42,'鷹６６','調布駅北口行'],[14,54,'調３４','調布駅北口行'],[15,9,'調３４','調布駅北口行'],[15,16,'鷹６６','調布駅北口行'],[15,22,'調３４','調布駅北口行'],[15,34,'調３４','調布駅北口行'],[15,47,'鷹６６','調布駅北口行'],[15,49,'調３４','調布駅北口行'],[16,1,'調３４','調布駅北口行'],[16,13,'鷹６６','調布駅北口行'],[16,14,'調３４','調布駅北口行'],[16,29,'調３４','調布駅北口行'],[16,41,'調３４','調布駅北口行'],[16,48,'鷹６６','調布駅北口行'],[16,54,'調３４','調布駅北口行'],[17,14,'調３４','調布駅北口行'],[17,18,'鷹６６','調布駅北口行'],[17,33,'調３４','調布駅北口行'],[17,50,'鷹６６','調布駅北口行'],[17,59,'調３４','調布駅北口行'],[18,19,'鷹６６','調布駅北口行'],[18,29,'調３４','調布駅北口行'],[18,47,'鷹６６','調布駅北口行'],[19,18,'鷹６６','調布駅北口行'],[19,44,'鷹６６','調布駅北口行'],[20,16,'調３４','調布駅北口行'],[20,17,'鷹６６','調布駅北口行'],[20,40,'鷹６６','調布駅北口行'],[21,6,'鷹６６','調布駅北口行'],[21,35,'鷹６６','調布駅北口行'],[21,58,'調３４','調布駅北口行'],[22,7,'鷹６６','調布駅北口行'],[22,12,'調３４','調布駅北口行'],[22,22,'調３４','調布駅北口行']],holiday:[[7,21,'鷹６６','調布駅北口行'],[7,55,'鷹６６','調布駅北口行'],[8,40,'鷹６６','調布駅北口行'],[8,44,'調３４','調布駅北口行'],[9,11,'鷹６６','調布駅北口行'],[9,12,'調３４','調布駅北口行'],[9,26,'調３４','調布駅北口行'],[9,36,'調３４','調布駅北口行'],[9,39,'鷹６６','調布駅北口行'],[9,48,'調３４','調布駅北口行'],[10,6,'調３４','調布駅北口行'],[10,13,'鷹６６','調布駅北口行'],[10,18,'調３４','調布駅北口行'],[10,36,'調３４','調布駅北口行'],[10,38,'鷹６６','調布駅北口行'],[10,45,'調３４','調布駅北口行'],[10,58,'調３４','調布駅北口行'],[11,8,'鷹６６','調布駅北口行'],[11,11,'調３４','調布駅北口行'],[11,21,'調３４','調布駅北口行'],[11,34,'調３４','調布駅北口行'],[11,34,'鷹６６','調布駅北口行'],[11,41,'調３４','調布駅北口行'],[11,51,'調３４','調布駅北口行'],[12,6,'調３４','調布駅北口行'],[12,6,'鷹６６','調布駅北口行'],[12,21,'調３４','調布駅北口行'],[12,36,'調３４','調布駅北口行'],[12,36,'鷹６６','調布駅北口行'],[12,51,'調３４','調布駅北口行'],[13,5,'鷹６６','調布駅北口行'],[13,6,'調３４','調布駅北口行'],[13,16,'調３４','調布駅北口行'],[13,31,'調３４','調布駅北口行'],[13,41,'鷹６６','調布駅北口行'],[13,46,'調３４','調布駅北口行'],[13,56,'調３４','調布駅北口行'],[14,8,'鷹６６','調布駅北口行'],[14,11,'調３４','調布駅北口行'],[14,26,'調３４','調布駅北口行'],[14,41,'鷹６６','調布駅北口行'],[14,41,'調３４','調布駅北口行'],[14,56,'調３４','調布駅北口行'],[15,7,'鷹６６','調布駅北口行'],[15,11,'調３４','調布駅北口行'],[15,26,'調３４','調布駅北口行'],[15,36,'調３４','調布駅北口行'],[15,48,'鷹６６','調布駅北口行'],[15,51,'調３４','調布駅北口行'],[16,6,'調３４','調布駅北口行'],[16,11,'鷹６６','調布駅北口行'],[16,21,'調３４','調布駅北口行'],[16,36,'調３４','調布駅北口行'],[16,48,'鷹６６','調布駅北口行'],[16,51,'調３４','調布駅北口行'],[17,6,'調３４','調布駅北口行'],[17,15,'鷹６６','調布駅北口行'],[17,16,'調３４','調布駅北口行'],[17,36,'調３４','調布駅北口行'],[17,48,'鷹６６','調布駅北口行'],[17,51,'調３４','調布駅北口行'],[18,6,'調３４','調布駅北口行'],[18,13,'鷹６６','調布駅北口行'],[18,16,'調３４','調布駅北口行'],[18,30,'調３４','調布駅北口行'],[18,39,'鷹６６','調布駅北口行'],[19,16,'鷹６６','調布駅北口行'],[19,38,'鷹６６','調布駅北口行'],[20,15,'調３４','調布駅北口行'],[20,16,'鷹６６','調布駅北口行'],[20,39,'鷹６６','調布駅北口行'],[21,5,'鷹６６','調布駅北口行'],[21,34,'鷹６６','調布駅北口行'],[21,55,'調３４','調布駅北口行'],[22,8,'鷹６６','調布駅北口行'],[22,12,'調３４','調布駅北口行'],[22,22,'調３４','調布駅北口行']]}
+};
+
+// =============================================
+// 地理データ
+// =============================================
+const STOP_POS = { lat: 35.658730, lng: 139.551758 }; // 八雲台（buste.inで確認済み）
+let userPos = { lat: 35.659100, lng: 139.552200 };
+
+const ROUTE_ORIGINS = {
+  1: { lat: 35.70273, lng: 139.57957, label: '吉祥寺方面' },
+  2: { lat: 35.65175, lng: 139.54476, label: '調布方面' },
+  3: { lat: 35.68340, lng: 139.56041, label: '三鷹方面' },
+  4: { lat: 35.65175, lng: 139.54476, label: '調布方面' },
+};
+
+// 4路線のOSMリレーションID（吉14小急・鷹61小急・調34京王・鷹66京王）
+// Overpass APIで路線リレーションに属するバス停を全取得する
+const ROUTE_RELATIONS = [
+  { id: 5887406, name: '吉14', op: 'odakyu' },
+  { id: 5887407, name: '鷹61', op: 'odakyu' },
+  { id: 1234567, name: '調34', op: 'keio' },   // 暫定ID（後述の検索で取得）
+  { id: 1234568, name: '鷹66', op: 'keio' },   // 暫定ID
+];
+
+// =============================================
+// GTFS-RT設定
+// =============================================
+const GTFS_RT_KEY = 'ftvgdowhcnvsy5vjxu239lrq7tmua0p77c5wrgar2q11n2g87algpfd5h24mymiw';
+const GTFS_RT_URL = `https://api.odpt.org/api/v4/gtfs/realtime/odpt_KeioBus_AllLines_vehicle?acl:consumerKey=${GTFS_RT_KEY}`;
+let rtBusMarkers = {};
+let rtEnabled = false;
+
+// =============================================
+// 状態
+// =============================================
+let currentDir = 1;
+const DIR_MAP = [3, 4, 1, 2];
+let map, stopMarker, userMarker, busMarker;
+let demoAnimFrame = null;
+let demoBusPos = null;
+let demoProgress = 0;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmt(h, m) { return `${pad(h)}:${pad(m)}`; }
+function dayType() { const w = new Date().getDay(); return w === 0 ? 'holiday' : w === 6 ? 'saturday' : 'weekday'; }
+function dayLabel() { const w = new Date().getDay(); return w === 0 ? '日祝ダイヤ' : w === 6 ? '土曜' : '平日'; }
+
+function isOdakyu(dir) { return dir <= 2; }
+function accentColor(dir) { return isOdakyu(dir) ? 'var(--accent-odakyu)' : 'var(--accent-keio)'; }
+
+function getSched(dir) {
+  const now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
+  return (TT[dir][dayType()] || [])
+    .map(([h, m, r, d]) => ({ h, m, r, d, dep: h * 60 + m, diff: h * 60 + m - nm }))
+    .filter(b => b.diff > -1)
+    .sort((a, b) => a.dep - b.dep);
+}
+
+function getBadgeClass(route, dir) {
+  if (dir <= 2) return route.includes('吉') ? 'rb-odakyu' : 'rb-red';
+  return route.includes('調') ? 'rb-keio' : 'rb-green';
+}
+
+// =============================================
+// MAP INIT
+// =============================================
+function initMap() {
+  map = L.map('map', {
+    center: [STOP_POS.lat, STOP_POS.lng],
+    zoom: 14,
+    zoomControl: true,
+    attributionControl: false,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+
+  // 八雲台マーカー（特別表示）
+  const stopIcon = L.divIcon({
+    className: '',
+    html: `<div class="stop-pin">
+      <div class="stop-pin-circle"></div>
+      <div class="stop-pin-label">🚏 八雲台</div>
+    </div>`,
+    iconSize: [70, 42],
+    iconAnchor: [35, 9],
+  });
+  stopMarker = L.marker([STOP_POS.lat, STOP_POS.lng], { icon: stopIcon, zIndexOffset: 500 }).addTo(map);
+
+  // 現在地マーカー
+  const youIcon = L.divIcon({
+    className: '',
+    html: `<div class="you-pin"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+  });
+  userMarker = L.marker([userPos.lat, userPos.lng], { icon: youIcon }).addTo(map);
+
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(pos => {
+      userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      userMarker.setLatLng([userPos.lat, userPos.lng]);
+    }, null, { enableHighAccuracy: true });
   }
-};
 
-let currentDir=3;
+  // OSMからバス停を取得・描画
+  loadBusStopsFromOSM();
+}
 
-// ==========================================
-// ★ Cloudflare WorkerのURLをここに入力 ★
-// （未設定の場合は時刻表ベースのみで動作）
-// ==========================================
-const WORKER_URL = ""; // 例: "https://keio-proxy.yourname.workers.dev"
+// =============================================
+// ODPT APIでバス停を取得（京王・小田急）
+// =============================================
+const ODPT_TOKEN = 'ftvgdowhcnvsy5vjxu239lrq7tmua0p77c5wrgar2q11n2g87algpfd5h24mymiw';
 
-// 八雲台バス停に関係する路線・方向（GTFS route_id）
-// 実際のroute_idはGTFSデータで確認が必要（暫定値）
-const YAKUMODAI_ROUTES = {
-  '調34': ['chofu34', 'Cho34', '調布34', '調34'],
-  '鷹66': ['taka66', 'Taka66', '鷹66'],
-};
-
-// リアルタイム遅延データキャッシュ
-let rtData = {
-  delays: {}, // { "trip_id": delaySeconds }
-  vehicles: {}, // { "trip_id": { lat, lon, timestamp } }
-  lastFetch: 0,
-  status: 'off', // 'off' | 'live' | 'error'
-};
-
-async function fetchRealtime() {
-  if (!WORKER_URL) {
-    document.getElementById('rt-banner').style.display = 'none';
-    document.getElementById('setup-msg').style.display = 'block';
-    return;
-  }
-  document.getElementById('rt-banner').style.display = 'flex';
-  document.getElementById('setup-msg').style.display = 'none';
+async function loadBusStopsFromOSM() {
+  const banner = document.getElementById('rt-banner');
+  const dot    = document.getElementById('rt-dot');
+  const status = document.getElementById('rt-status');
+  banner.style.display = 'flex';
+  banner.className = 'rt-banner rt-inactive';
+  dot.className = 'rt-dot off';
+  status.textContent = 'バス停データ読み込み中…';
 
   try {
-    // GTFS-RT はprotobufバイナリなので、JSONで返すworkerを使う場合はそちらに対応
-    // ここではworkerがJSONに変換して返す前提でシンプルに実装
-    const res = await fetch(`${WORKER_URL}?type=vehicle`, {
-      signal: AbortSignal.timeout(8000)
+    // 京王・小田急を並列取得。八雲台中心8km圏内
+    // api.odpt.org/places はCORS対応済み・トークン必須
+    // 京王・小田急を別々に、かつ半径を広げて全路線カバー
+    const BASE = `https://api.odpt.org/api/v4/places/odpt:BusstopPole?acl:consumerKey=${ODPT_TOKEN}`;
+    // 八雲台〜吉祥寺〜三鷹〜調布〜深大寺をカバーするため
+    // 中心を少し北にずらし半径12kmに拡大
+    const [keioRes, odakyuRes] = await Promise.all([
+      fetch(`${BASE}&lat=35.675&lon=139.555&radius=12000&odpt:operator=odpt.Operator:KeioBus`),
+      fetch(`${BASE}&lat=35.675&lon=139.555&radius=12000&odpt:operator=odpt.Operator:OdakyuBus`)
+    ]);
+
+    if (!keioRes.ok) throw new Error(`京王API: ${keioRes.status}`);
+    if (!odakyuRes.ok) throw new Error(`小急API: ${odakyuRes.status}`);
+
+    const keioStops   = await keioRes.json();
+    const odakyuStops = await odakyuRes.json();
+
+    renderBusStops(keioStops, 'keio');
+    renderBusStops(odakyuStops, 'odakyu');
+
+    const total = keioStops.length + odakyuStops.length;
+    status.textContent = `京王${keioStops.length}件・小急${odakyuStops.length}件 取得完了`;
+    banner.className = 'rt-banner rt-active';
+    dot.className = 'rt-dot live';
+    setTimeout(() => { banner.style.display = 'none'; }, 3000);
+
+  } catch(e) {
+    status.textContent = `取得失敗: ${e.message}`;
+    banner.className = 'rt-banner rt-error';
+    dot.className = 'rt-dot err';
+    console.warn('ODPT error:', e);
+  }
+}
+
+// =============================================
+// バス停マーカー描画（ODPT形式）
+// =============================================
+function renderBusStops(stops, operator) {
+  const col   = operator === 'keio' ? '#00d4ff' : '#ff9500';
+  const label = operator === 'keio' ? '京王'    : '小急';
+
+  // 重複排除用（同名バス停が上下線で2件ある）
+  const seen = new Set();
+
+  stops.forEach(s => {
+    const lat  = s['geo:lat'];
+    const lon  = s['geo:long'];
+    const name = s['dc:title'] || s['owl:sameAs'] || '?';
+    if (!lat || !lon) return;
+
+    // 八雲台は特別マーカーで描画済みなのでスキップ
+    if (name === '八雲台') return;
+
+    // 同名・近接の重複スキップ（上下線・乗り場番号違い）55mグリッドで集約
+    const nameKey = name.replace(/[０-９0-9]+$/, '');
+    const posKey  = `${Math.round(lat*2000)}_${Math.round(lon*2000)}`;
+    const key = `${nameKey}_${posKey}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:9px;height:9px;border-radius:50%;
+        background:${col};
+        border:1.5px solid rgba(255,255,255,0.4);
+        box-shadow:0 0 5px ${col}99;
+      "></div>`,
+      iconSize: [9, 9],
+      iconAnchor: [4.5, 4.5],
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    // WorkerがJSONを返す場合（protobuf→JSON変換済み）
-    const json = await res.json();
-    const entities = json.entity || json.entities || [];
+    L.marker([lat, lon], { icon })
+      .bindTooltip(`<b>${name}</b><br><span style="color:${col};font-size:10px">${label}バス</span>`, {
+        permanent: false,
+        direction: 'top',
+        className: 'bus-stop-tooltip',
+      })
+      .addTo(map);
+  });
+}
 
-    const newDelays = {};
-    const newVehicles = {};
+// =============================================
+// GTFS-RT リアルタイム車両位置（京王バス）
+// Protobufをバイナリ手動パースして lat/lng を取得
+// =============================================
+async function fetchRTBuses() {
+  try {
+    const res = await fetch(GTFS_RT_URL);
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const buf = await res.arrayBuffer();
+    const vehicles = parseGtfsRtVehicle(new Uint8Array(buf));
+    renderRTBuses(vehicles);
+    rtEnabled = true;
+    // バナーをLIVEに
+    document.getElementById('rt-dot').className = 'rt-dot live';
+    document.getElementById('rt-status').textContent = `京王バス LIVE ${vehicles.length}台`;
+    document.getElementById('rt-banner').className = 'rt-banner rt-active';
+    document.getElementById('rt-banner').style.display = 'flex';
+  } catch(e) {
+    console.warn('GTFS-RT fetch失敗:', e.message);
+  }
+}
 
-    for (const entity of entities) {
-      const tu = entity.tripUpdate || entity.trip_update;
-      const vp = entity.vehicle;
-
-      if (tu) {
-        const tripId = tu.trip?.tripId || tu.trip?.trip_id;
-        const stu = tu.stopTimeUpdate || tu.stop_time_update || [];
-        if (tripId && stu.length > 0) {
-          const latest = stu[stu.length - 1];
-          const delay = latest.departure?.delay || latest.arrival?.delay || 0;
-          newDelays[tripId] = delay;
-        }
-      }
-      if (vp) {
-        const tripId = vp.trip?.tripId || vp.trip?.trip_id;
-        if (tripId && vp.position) {
-          newVehicles[tripId] = {
-            lat: vp.position.latitude,
-            lon: vp.position.longitude,
-            ts: vp.timestamp,
-          };
-        }
+// GTFS-RT Protobuf 手動パーサ（VehiclePosition の lat/lng/vehicle_id を抽出）
+function parseGtfsRtVehicle(bytes) {
+  const vehicles = [];
+  let i = 0;
+  function readVarint() {
+    let v = 0, s = 0;
+    while (i < bytes.length) {
+      const b = bytes[i++];
+      v |= (b & 0x7f) << s;
+      if (!(b & 0x80)) break;
+      s += 7;
+    }
+    return v;
+  }
+  function readFixed32() {
+    const v = new DataView(bytes.buffer, bytes.byteOffset + i, 4).getFloat32(0, true);
+    i += 4; return v;
+  }
+  function skipField(type) {
+    if (type === 0) readVarint();
+    else if (type === 1) { i += 8; }
+    else if (type === 2) { const len = readVarint(); i += len; }
+    else if (type === 5) { i += 4; }
+  }
+  function parseMsg(end) {
+    const obj = {};
+    while (i < end) {
+      const tag = readVarint();
+      const field = tag >> 3, type = tag & 7;
+      if (type === 2) {
+        const len = readVarint();
+        const sub = i; i += len;
+        obj[field] = parseMsg(i); // 再帰
+        i = sub + len; // 念のため
+        // ※ネストが深いのでflatに上書きOK
+        Object.assign(obj, obj[field]);
+      } else if (type === 5 && (field === 3 || field === 4)) {
+        // field 3=lat, 4=lng (VehiclePosition)
+        const v = readFixed32();
+        if (field === 3) obj.lat = v;
+        else obj.lng = v;
+      } else {
+        skipField(type);
       }
     }
+    return obj;
+  }
+  // FeedMessage → repeated FeedEntity (field=2)
+  while (i < bytes.length) {
+    const tag = readVarint();
+    const field = tag >> 3, type = tag & 7;
+    if (field === 2 && type === 2) {
+      const len = readVarint();
+      const end = i + len;
+      const entity = parseMsg(end);
+      i = end;
+      if (entity.lat && entity.lng) {
+        vehicles.push({ lat: entity.lat, lng: entity.lng });
+      }
+    } else {
+      skipField(type);
+    }
+  }
+  return vehicles;
+}
 
-    rtData.delays = newDelays;
-    rtData.vehicles = newVehicles;
-    rtData.lastFetch = Date.now();
-    rtData.status = 'live';
-    updateRtBanner('live', `${Object.keys(newVehicles).length}台追跡中`);
-  } catch (e) {
-    rtData.status = 'error';
-    updateRtBanner('error', 'リアルタイム取得失敗');
-    console.warn('RT fetch failed:', e);
+function renderRTBuses(vehicles) {
+  // 既存マーカー削除
+  Object.values(rtBusMarkers).forEach(m => map.removeLayer(m));
+  rtBusMarkers = {};
+
+  vehicles.forEach((v, idx) => {
+    if (!v.lat || !v.lng) return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#00d4ff;color:#000;
+        font-size:16px;border-radius:50%;
+        width:26px;height:26px;
+        display:flex;align-items:center;justify-content:center;
+        border:2px solid #fff;
+        box-shadow:0 0 8px #00d4ff99;
+      ">🚌</div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+    });
+    rtBusMarkers[idx] = L.marker([v.lat, v.lng], { icon, zIndexOffset: 300 })
+      .bindTooltip('京王バス（リアルタイム）', { direction: 'top', className: 'bus-stop-tooltip' })
+      .addTo(map);
+  });
+}
+
+// =============================================
+// バスアイコン更新
+// =============================================
+function makeBusIcon(route, dir, arriving) {
+  const od = isOdakyu(dir);
+  const cls = arriving ? 'arriving' : (od ? 'od' : '');
+  return L.divIcon({
+    className: '',
+    html: `<div class="bus-icon-wrap">
+      <div class="bus-icon-emoji">🚌</div>
+      <div class="bus-icon-label ${cls}">${route}</div>
+    </div>`,
+    iconSize: [50, 44],
+    iconAnchor: [25, 44],
+  });
+}
+
+function updateBusMarker() {
+  const sched = getSched(currentDir);
+  if (!sched.length) {
+    if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+    return;
+  }
+  const next = sched[0];
+  // デモ: 次のバスまでの時間に応じてバスを「遠い場所から近づかせる」
+  const remMin = next.diff;
+  // 0分→バス停、10分以上→遠い起点
+  const t = Math.max(0, Math.min(1, 1 - remMin / 12));
+  demoProgress = t;
+  const origin = ROUTE_ORIGINS[currentDir] || ROUTE_ORIGINS[1];
+  const lat = origin.lat + (STOP_POS.lat - origin.lat) * t;
+  const lng = origin.lng + (STOP_POS.lng - origin.lng) * t;
+  const arriving = remMin <= 2;
+  const icon = makeBusIcon(next.r, currentDir, arriving);
+  if (!busMarker) {
+    busMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map);
+  } else {
+    busMarker.setLatLng([lat, lng]);
+    busMarker.setIcon(icon);
   }
 }
 
-function updateRtBanner(status, msg) {
-  const banner = document.getElementById('rt-banner');
-  const dot = document.getElementById('rt-dot');
-  const statusEl = document.getElementById('rt-status');
-  const updatedEl = document.getElementById('rt-updated');
-  banner.className = `rt-banner rt-${status === 'live' ? 'active' : status === 'error' ? 'error' : 'inactive'}`;
-  dot.className = `rt-dot ${status === 'live' ? 'live' : status === 'error' ? 'err' : 'off'}`;
-  statusEl.textContent = status === 'live' ? `🛰 LIVE · ${msg}` : `${msg}`;
-  if (status === 'live') {
-    const d = new Date();
-    updatedEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}更新`;
+// =============================================
+// デモ：バスをゆっくりスライドさせる（毎秒）
+// =============================================
+function animateDemoBus() {
+  const sched = getSched(currentDir);
+  if (!sched.length) return;
+  const next = sched[0];
+  const now = new Date();
+  const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const depSec = next.h * 3600 + next.m * 60;
+  const remSec = Math.max(0, depSec - nowSec);
+  const totalSec = 12 * 60; // 12分をフルレンジとする
+  const t = Math.max(0, Math.min(1, 1 - remSec / totalSec));
+  const origin = ROUTE_ORIGINS[currentDir] || ROUTE_ORIGINS[1];
+  const lat = origin.lat + (STOP_POS.lat - origin.lat) * t;
+  const lng = origin.lng + (STOP_POS.lng - origin.lng) * t;
+  const arriving = remSec <= 120;
+  const icon = makeBusIcon(next.r, currentDir, arriving);
+  if (!busMarker) {
+    busMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map);
+  } else {
+    busMarker.setLatLng([lat, lng]);
+    busMarker.setIcon(icon);
   }
 }
 
-function getDelayForBus(bus) {
-  // 時刻表ベースのバスとtripIDを照合（実際はGTFS静的データで確認が必要）
-  // ここでは遅延があるtripのうち発車時刻が近いものを推定マッチ
-  if (Object.keys(rtData.delays).length === 0) return null;
-  // 簡易マッチ: 発車時刻±3分以内のdelayを返す（暫定）
-  return null; // 本実装はGTFS静的データのtrip_id照合が必要
+// =============================================
+// UI 更新
+// =============================================
+function updateUI() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  document.getElementById('day-chip').textContent = dayLabel();
+
+  const sched = getSched(currentDir);
+
+  if (!sched.length) {
+    document.getElementById('next-dest').textContent = '本日の運行終了';
+    document.getElementById('next-route').textContent = '—';
+    document.getElementById('cnt-num').textContent = '—';
+    document.getElementById('cnt-depart').textContent = '';
+    document.getElementById('upcoming-row').innerHTML = '';
+    return;
+  }
+
+  const next = sched[0];
+  const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const depSec = next.h * 3600 + next.m * 60;
+  const remSec = Math.max(0, depSec - nowSec);
+  const remMin = Math.floor(remSec / 60);
+  const remS = remSec % 60;
+  const od = isOdakyu(currentDir);
+  const arriving = remSec <= 120;
+
+  // badge
+  const badge = document.getElementById('next-badge');
+  badge.textContent = next.r;
+  badge.className = `route-badge ${getBadgeClass(next.r, currentDir)}`;
+
+  document.getElementById('next-dest').textContent = next.d;
+  document.getElementById('next-route').textContent = `${next.r}系統`;
+
+  // countdown
+  const numEl = document.getElementById('cnt-num');
+  numEl.className = `cnt-num ${arriving ? 'urgent-col' : od ? 'odakyu-col' : 'keio-col'}`;
+  if (remSec <= 0) {
+    numEl.textContent = 'まもなく';
+    document.getElementById('cnt-unit').textContent = '';
+  } else if (remMin === 0) {
+    numEl.textContent = remS;
+    document.getElementById('cnt-unit').textContent = '秒';
+  } else {
+    numEl.textContent = remMin;
+    document.getElementById('cnt-unit').textContent = `分 ${pad(remS)}秒`;
+  }
+  document.getElementById('cnt-depart').textContent = `${fmt(next.h, next.m)}発`;
+
+  // upcoming cards
+  const upRow = document.getElementById('upcoming-row');
+  upRow.innerHTML = sched.slice(1, 6).map(b => {
+    const col = isOdakyu(currentDir) ? '#ff9500' : '#00d4ff';
+    return `<div class="upcoming-card">
+      <div class="uc-time" style="color:${col}">${fmt(b.h, b.m)}</div>
+      <div class="uc-dest">${b.d}</div>
+      <div class="uc-min" style="color:${col}">あと${b.diff}分</div>
+    </div>`;
+  }).join('');
+
+  // デモバスアニメ
+  animateDemoBus();
 }
 
-function dayType(){const d=new Date(),w=d.getDay();return w===0?'holiday':w===6?'saturday':'weekday';}
-function dayLabel(){const d=new Date(),w=d.getDay();return w===0?'日曜・祝日ダイヤ':w===6?'土曜ダイヤ':'平日ダイヤ';}
-function pad(n){return String(n).padStart(2,'0');}
-function fmt(h,m){return `${pad(h)}:${pad(m)}`;}
-
-function getBadge(r){
-  if(r.includes('吉'))return 'badge-yoshi';
-  if(r.includes('鷹６１'))return 'badge-taka61';
-  if(r.includes('調'))return 'badge-cho';
-  return 'badge-taka';
+// =============================================
+// タブ切替
+// =============================================
+function setDir(tabIdx) {
+  currentDir = DIR_MAP[tabIdx];
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach((t, i) => {
+    const od = i <= 1;
+    t.className = 'tab' + (i === tabIdx ? (od ? ' active-o' : ' active-k') : '');
+  });
+  // バスマーカーをいったん消して再生成
+  if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+  // 地図の向きを少しずらす（のりばが左右にある）
+  const offset = tabIdx <= 1 ? [0.0003, 0] : [-0.0003, 0];
+  map.setView([STOP_POS.lat + offset[0], STOP_POS.lng + offset[1]], 16, { animate: true });
+  updateUI();
 }
 
-function getSched(){
-  const buses=TT[currentDir][dayType()];
-  const now=new Date(), nm=now.getHours()*60+now.getMinutes();
-  return buses.map(([h,m,r,d])=>({h,m,r,d,dep:h*60+m,diff:h*60+m-nm}))
-    .filter(b=>b.diff>-2).sort((a,b)=>a.dep-b.dep);
-}
-
-function setDir(d){
-  // 0→小急① (TT[3]), 1→小急② (TT[4]), 2→京王① (TT[1]), 3→京王② (TT[2])
-  const map=[3,4,1,2];
-  currentDir=map[d];
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===d));
-  render();
-}
-
-function render(){
-  const now=new Date();
-  document.getElementById('clock').textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  document.getElementById('dayLabel').textContent=dayLabel();
-  const sched=getSched(), app=document.getElementById('app');
-  if(!sched.length){app.innerHTML='<div class="no-bus">🌙 本日の運行は終了しました</div>';return;}
-  const next=sched[0], up=sched.slice(1,6), od=currentDir>=3;
-  const ns=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
-  const ds=next.h*3600+next.m*60, rem=Math.max(0,ds-ns), rm=Math.floor(rem/60), rs=rem%60;
-  const urg=rm<3, pp=Math.max(0,Math.min(100,(1-rem/900)*100));
-  const nc=urg?'countdown-num urgent':od?'countdown-num odakyu-color':'countdown-num';
-  let cnt;
-  if(rem<=0)cnt=`<span class="arrived-tag">まもなく到着</span>`;
-  else if(rm===0)cnt=`<div class="countdown-wrap"><span class="${nc}">${rs}</span><span class="countdown-unit">秒</span></div>`;
-  else cnt=`<div class="countdown-wrap"><span class="${nc}">${rm}</span><span class="countdown-unit">分${pad(rs)}秒</span></div>`;
-  const upH=up.map((b,i)=>`
-    <div class="bus-card" style="animation-delay:${i*.06}s">
-      <div class="card-badge ${getBadge(b.r)}">${b.r}</div>
-      <div class="card-info"><div class="card-dest">${b.d}</div><div class="card-route">${b.r}系統</div></div>
-      <div class="card-time-block">
-        <div class="card-depart">${fmt(b.h,b.m)}</div>
-        <div class="card-remaining${b.diff<=5?' soon':''}">あと約${b.diff}分</div>
-      </div>
-    </div>`).join('');
-  app.innerHTML=`
-    <div class="${od?'hero odakyu-hero':'hero'}">
-      <div class="${od?'hero-label odakyu-label':'hero-label'}">▶ 次のバス</div>
-      <div class="hero-route">${next.r}系統</div>
-      <div class="hero-destination">${next.d}</div>
-      ${cnt}
-      <div class="depart-time">発車予定：<span>${fmt(next.h,next.m)}</span></div>
-      <div class="progress-bar"><div class="${od?'progress-fill odakyu-fill':'progress-fill'}" style="width:${pp}%"></div></div>
-    </div>
-    <div class="section-title">今後のバス</div>
-    <div class="bus-list">${upH||'<div style="color:var(--text-dim);font-size:13px;padding:8px 0">本日の運行はこれで終わりです</div>'}</div>`;
-}
-render();setInterval(render,1000);
-
-// リアルタイム: 30秒ごとに取得
-if (WORKER_URL) {
-  fetchRealtime();
-  setInterval(fetchRealtime, 30000);
-} else {
-  // Worker未設定時はセットアップ案内を表示
-  document.getElementById('setup-msg').style.display = 'block';
-}
+// =============================================
+// BOOT
+// =============================================
+window.addEventListener('load', () => {
+  initMap();
+  updateUI();
+  setInterval(updateUI, 1000);
+  // GTFS-RT: 起動後2秒で初回取得、以降30秒ごと
+  setTimeout(() => {
+    fetchRTBuses();
+    setInterval(fetchRTBuses, 30000);
+  }, 2000);
+});
 </script>
 </body>
 </html>
