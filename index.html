@@ -8,6 +8,7 @@
 <title>八雲台 バス</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -310,8 +311,20 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); font-family:
   100% { box-shadow: 0 0 0 0 rgba(74,222,128,0), 0 0 12px rgba(74,222,128,.3); }
 }
 
+/* Route tooltip */
+.route-tooltip {
+  background: rgba(10,15,30,0.9);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #f0f6ff;
+  font-size: 0.75em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.route-tooltip::before { display: none; }
+
 /* Leaflet overrides */
-.leaflet-container { background: #1a2035; }
+.leaflet-container { background: #e8e0d8; }
 .leaflet-control-zoom { border: 1px solid var(--border) !important; }
 .leaflet-control-zoom a { background: rgba(26,34,52,.95) !important; color: var(--text) !important; border-color: var(--border) !important; }
 .bus-stop-tooltip {
@@ -456,7 +469,7 @@ const ROUTE_RELATIONS = [
 // =============================================
 // GTFS-RT設定
 // =============================================
-const GTFS_RT_KEY = 'ftvgdowhcnvsy5vjxu239lrq7tmua0p77c5wrgar2q11n2g87algpfd5h24mymiw';
+const GTFS_RT_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GTFS_RT_KEY : '';
 const GTFS_RT_URL = `https://api.odpt.org/api/v4/gtfs/realtime/odpt_KeioBus_AllLines_vehicle?acl:consumerKey=${GTFS_RT_KEY}`;
 let rtBusMarkers = {};
 let rtEnabled = false;
@@ -503,8 +516,9 @@ function initMap() {
     attributionControl: false,
   });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
+  L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    attribution: '© Google Maps'
   }).addTo(map);
 
   // 八雲台マーカー（特別表示）
@@ -535,14 +549,76 @@ function initMap() {
     }, null, { enableHighAccuracy: true });
   }
 
+  // GTFSデータから路線を描画
+  drawGtfsRoutes();
+
   // OSMからバス停を取得・描画
   loadBusStopsFromOSM();
 }
 
 // =============================================
+// GTFS路線描画
+// =============================================
+const GTFS_DATA = {"patterns":[{"route_id":"351","route_name":"調３４","stops":["0787_03","1255_01","1254_01","1496_01","1497_01","1495_01","0450_01","0777_01","0589_01","1035_01","0793_01","0551_01","0173_01","0587_00"],"trip_count":114},{"route_id":"351","route_name":"調３４","stops":["0587_00","0589_02","0777_02","0450_02","1495_02","1497_02","1496_02","1254_02","1255_02","0787_00"],"trip_count":31},{"route_id":"351","route_name":"調３４","stops":["0587_00","0589_02","0777_02","0450_02","1495_02","1497_02","1496_02","1254_08","1255_08","0787_00"],"trip_count":92},{"route_id":"1540","route_name":"鷹６６","stops":["0787_03","1255_01","1254_01","1496_01","1497_01","1495_01","0450_01","0777_01","0589_01","0002_01","1035_01","0261_01","0626_01","0346_01","1378_01","1381_01","0121_01","0487_01","0521_01","1393_02","0969_02","0249_02","1328_02","1376_00"],"trip_count":92},{"route_id":"1540","route_name":"鷹６６","stops":["1376_03","0249_01","0969_01","1393_01","0521_02","0487_02","0121_02","1381_02","1378_02","0346_02","0626_02","0261_02","1035_02","0002_02","0589_02","0777_02","0450_02","1495_02","1497_02","1496_02","1254_02","1255_02","0787_00"],"trip_count":32},{"route_id":"1540","route_name":"鷹６６","stops":["1376_03","0249_01","0969_01","1393_01","0521_02","0487_02","0121_02","1381_02","1378_02","0346_02","0626_02","0261_02","1035_02","0002_02","0589_02","0777_02","0450_02","1495_02","1497_02","1496_02","1254_08","1255_08","0787_00"],"trip_count":60}],"stops":{"0787_03":{"name":"調布駅北口","lat":35.652093,"lng":139.543975},"1255_01":{"name":"布田一丁目","lat":35.65205,"lng":139.547965},"1254_01":{"name":"布田","lat":35.651364,"lng":139.550681},"1496_01":{"name":"八雲台小学校","lat":35.654731,"lng":139.551944},"1497_01":{"name":"八雲台郵便局","lat":35.65617,"lng":139.551927},"1495_01":{"name":"八雲台","lat":35.658935,"lng":139.551847},"0450_01":{"name":"佐須","lat":35.661276,"lng":139.552923},"0777_01":{"name":"中央道深大寺バス停下","lat":35.663657,"lng":139.552914},"0589_01":{"name":"深大寺小学校","lat":35.66657,"lng":139.553196},"1035_01":{"name":"西原","lat":35.669286,"lng":139.554753},"0793_01":{"name":"調布市総合体育館前","lat":35.671204,"lng":139.551678},"0551_01":{"name":"神代植物公園","lat":35.671663,"lng":139.544977},"0173_01":{"name":"御塔坂上","lat":35.667906,"lng":139.545158},"0587_00":{"name":"深大寺","lat":35.666728,"lng":139.549391},"0589_02":{"name":"深大寺小学校","lat":35.665458,"lng":139.55299},"0777_02":{"name":"中央道深大寺バス停下","lat":35.663298,"lng":139.553064},"0450_02":{"name":"佐須","lat":35.66042,"lng":139.552522},"1495_02":{"name":"八雲台","lat":35.658109,"lng":139.551834},"1497_02":{"name":"八雲台郵便局","lat":35.655822,"lng":139.552032},"1496_02":{"name":"八雲台小学校","lat":35.654098,"lng":139.551954},"1254_02":{"name":"布田","lat":35.651263,"lng":139.550694},"1255_02":{"name":"布田一丁目","lat":35.652193,"lng":139.547292},"0787_00":{"name":"調布駅北口","lat":35.652263,"lng":139.543929},"1254_08":{"name":"布田","lat":35.653339,"lng":139.550818},"1255_08":{"name":"布田一丁目","lat":35.654451,"lng":139.544428},"0002_01":{"name":"青渭神社前","lat":35.667667,"lng":139.553761},"0261_01":{"name":"北ノ台小学校","lat":35.674444,"lng":139.554417},"0626_01":{"name":"諏訪神社（調布市）","lat":35.678099,"lng":139.555836},"0346_01":{"name":"航研前","lat":35.679995,"lng":139.557462},"1378_01":{"name":"三鷹市役所","lat":35.683753,"lng":139.559881},"1381_01":{"name":"三鷹農協前","lat":35.684349,"lng":139.563536},"0121_01":{"name":"ＭＣＣ三鷹ビル","lat":35.685723,"lng":139.563714},"0487_01":{"name":"篠原病院入口","lat":35.688714,"lng":139.564164},"0521_01":{"name":"下連雀七丁目","lat":35.691168,"lng":139.564545},"1393_02":{"name":"南浦","lat":35.693599,"lng":139.564897},"0969_02":{"name":"仲町通り","lat":35.694561,"lng":139.565289},"0249_02":{"name":"北浦","lat":35.697852,"lng":139.564363},"1328_02":{"name":"本町通り","lat":35.700374,"lng":139.561768},"1376_00":{"name":"三鷹駅南口","lat":35.701942,"lng":139.560965},"1376_03":{"name":"三鷹駅南口","lat":35.701716,"lng":139.559984},"0249_01":{"name":"北浦","lat":35.698815,"lng":139.563617},"0969_01":{"name":"仲町通り","lat":35.693612,"lng":139.565029},"1393_01":{"name":"南浦","lat":35.692595,"lng":139.564893},"0521_02":{"name":"下連雀七丁目","lat":35.691454,"lng":139.564715},"0487_02":{"name":"篠原病院入口","lat":35.689151,"lng":139.564373},"0121_02":{"name":"ＭＣＣ三鷹ビル","lat":35.685797,"lng":139.563859},"1381_02":{"name":"三鷹農協前","lat":35.683331,"lng":139.562936},"1378_02":{"name":"三鷹市役所","lat":35.683687,"lng":139.559594},"0346_02":{"name":"航研前","lat":35.680284,"lng":139.557784},"0626_02":{"name":"諏訪神社（調布市）","lat":35.677149,"lng":139.554788},"0261_02":{"name":"北ノ台小学校","lat":35.674708,"lng":139.554497},"1035_02":{"name":"西原","lat":35.668967,"lng":139.554737},"0002_02":{"name":"青渭神社前","lat":35.667452,"lng":139.553816}}};
+
+const ROUTE_COLORS = { '351': '#00d4ff', '1540': '#ff9500' };
+
+function drawGtfsRoutes() {
+  // 同じroute_idのパターンを代表1つにまとめて描画（最多便数のものを選ぶ）
+  const bestByRoute = {};
+  for (const p of GTFS_DATA.patterns) {
+    if (!bestByRoute[p.route_id] || p.trip_count > bestByRoute[p.route_id].trip_count) {
+      bestByRoute[p.route_id] = p;
+    }
+  }
+
+  for (const [routeId, pattern] of Object.entries(bestByRoute)) {
+    const color = ROUTE_COLORS[routeId] || '#aaaaaa';
+    const coords = pattern.stops
+      .map(sid => GTFS_DATA.stops[sid])
+      .filter(s => s)
+      .map(s => [s.lat, s.lng]);
+
+    if (coords.length < 2) continue;
+
+    // 路線ライン（影）
+    L.polyline(coords, {
+      color: '#000',
+      weight: 6,
+      opacity: 0.25,
+      lineJoin: 'round',
+    }).addTo(map);
+
+    // 路線ライン（本体）
+    L.polyline(coords, {
+      color,
+      weight: 3.5,
+      opacity: 0.85,
+      lineJoin: 'round',
+    }).addTo(map).bindTooltip(pattern.route_name, { sticky: true, className: 'route-tooltip' });
+
+    // バス停マーカー（小さい点）
+    for (const sid of pattern.stops) {
+      const s = GTFS_DATA.stops[sid];
+      if (!s) continue;
+      const isYakumodai = ['1495_01','1495_02','1496_01','1496_02','1497_01','1497_02'].includes(sid);
+      if (isYakumodai) continue; // 八雲台は既に専用マーカーがある
+      L.circleMarker([s.lat, s.lng], {
+        radius: 4,
+        color,
+        fillColor: '#fff',
+        fillOpacity: 1,
+        weight: 2,
+        opacity: 0.9,
+      }).addTo(map).bindTooltip(s.name, { direction: 'top', className: 'route-tooltip' });
+    }
+  }
+}
+
+// =============================================
 // ODPT APIでバス停を取得（京王・小田急）
 // =============================================
-const ODPT_TOKEN = 'ftvgdowhcnvsy5vjxu239lrq7tmua0p77c5wrgar2q11n2g87algpfd5h24mymiw';
+const ODPT_TOKEN = (typeof CONFIG !== 'undefined') ? CONFIG.GTFS_RT_KEY : '';
 
 async function loadBusStopsFromOSM() {
   const banner = document.getElementById('rt-banner');
